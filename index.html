@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Piani di lavoro</title>
+  <meta name="description" content="Compilazione rapida e uniforme dei piani di lavoro annuali dei docenti della scuola secondaria di primo grado.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f5fa8'/%3E%3Cpath d='M9 8h11l4 4v12H9z' fill='white'/%3E%3Cpath d='M12 15h9M12 19h9M12 23h6' stroke='%231f5fa8' stroke-width='1.6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="testata-app">
+    <a class="marchio" href="#/piani">
+      <span class="logo" aria-hidden="true">PdL</span>
+      <span class="marchio-testo"><strong>Piani di lavoro</strong><span id="nome-scuola"></span></span>
+    </a>
+    <nav class="nav-principale" aria-label="Navigazione principale">
+      <a href="#/piani" data-nav="piani">I miei piani</a>
+      <a href="#/modello" data-nav="modello">Modello d'istituto</a>
+      <a href="#/guida" data-nav="guida">Guida</a>
+    </nav>
+    <button type="button" id="btn-importa" class="btn">Importa file</button>
+  </header>
+  <div id="banner"></div>
+  <main id="app" tabindex="-1"></main>
+  <div id="avvisi" class="avvisi" role="status" aria-live="polite"></div>
+  <noscript><p class="card">Per usare l'app è necessario abilitare JavaScript nel browser.</p></noscript>
+
+  <script src="js/defaults.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/documento.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
