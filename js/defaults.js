@@ -234,6 +234,38 @@
     }
   ];
 
+  var CATALOGO_ARGOMENTI = root.PDL && root.PDL.argomenti;
+  if (!CATALOGO_ARGOMENTI && typeof require === 'function') CATALOGO_ARGOMENTI = require('./argomenti.js');
+
+  // Legge un elenco di argomenti scritto come testo: una voce per riga,
+  // le righe che finiscono con ":" sono i titoli dei gruppi.
+  function leggiArgomenti(testo) {
+    var gruppi = [];
+    var corrente = null;
+    String(testo == null ? '' : testo).split(/\r?\n/).forEach(function (r) {
+      var riga = r.trim();
+      if (!riga) return;
+      if (/:$/.test(riga)) {
+        corrente = { titolo: riga.slice(0, -1).trim(), voci: [] };
+        gruppi.push(corrente);
+        return;
+      }
+      if (!corrente) {
+        corrente = { titolo: '', voci: [] };
+        gruppi.push(corrente);
+      }
+      corrente.voci.push(riga);
+    });
+    return gruppi.filter(function (g) { return g.voci.length; });
+  }
+
+  function argomentiPredefiniti(nome) {
+    var a = (CATALOGO_ARGOMENTI || {})[nome] || {};
+    return { 1: leggiArgomenti(a[1]), 2: leggiArgomenti(a[2]), 3: leggiArgomenti(a[3]) };
+  }
+
+  DISCIPLINE.forEach(function (d) { d.argomenti = argomentiPredefiniti(d.nome); });
+
   var SEZIONI = [
     {
       id: 'dati',
@@ -283,6 +315,14 @@
       titolo: 'Traguardi per lo sviluppo delle competenze',
       attiva: true,
       guida: 'Indicazioni nazionali per il curricolo (2012): traguardi al termine della scuola secondaria di primo grado. L\'elenco cambia in base alla disciplina scelta.'
+    },
+    {
+      id: 'argomenti',
+      tipo: 'argomenti',
+      titolo: 'Contenuti: argomenti trattati',
+      attiva: true,
+      guida: 'Banca argomenti della disciplina: spunta quelli che tratterai durante l\'anno. Se svolgi argomenti diversi, aggiungili in fondo alla sezione: resteranno nella tua banca personale.',
+      testo: ''
     },
     {
       id: 'uda',
@@ -466,7 +506,7 @@
 
   function modelloPredefinito() {
     return {
-      schema: 1,
+      schema: 2,
       aggiornato: '',
       bloccato: false,
       scuola: {
@@ -485,7 +525,9 @@
   var api = {
     modelloPredefinito: modelloPredefinito,
     annoScolasticoCorrente: annoScolasticoCorrente,
-    TIPI_SEZIONE: ['dati', 'situazione', 'checklist', 'traguardi', 'uda', 'testo']
+    leggiArgomenti: leggiArgomenti,
+    argomentiPredefiniti: argomentiPredefiniti,
+    TIPI_SEZIONE: ['dati', 'situazione', 'checklist', 'traguardi', 'argomenti', 'uda', 'testo']
   };
 
   root.PDL = root.PDL || {};

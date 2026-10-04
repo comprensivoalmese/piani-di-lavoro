@@ -96,11 +96,23 @@
       }).join('') + '</tbody></table>';
   }
 
-  function corpoSezione(piano, sez, modello) {
+  function sezioneArgomenti(piano, sez, modello, banca) {
+    var scelti = model.argomentiScelti(piano, sez, modello, banca);
+    var html = scelti.gruppi.map(function (g) {
+      return (g.titolo ? '<p class="doc-sotto">' + esc(g.titolo) + '</p>' : '') + elenco(g.voci);
+    }).join('');
+    if (scelti.altri.length) html += (html ? '<p class="doc-sotto">Altri argomenti</p>' : '') + elenco(scelti.altri);
+    var note = model.valoreSezione(piano, sez).note;
+    if (String(note || '').trim()) html += paragrafi(note);
+    return html || VUOTO;
+  }
+
+  function corpoSezione(piano, sez, modello, banca) {
     switch (sez.tipo) {
       case 'situazione': return sezioneSituazione(piano, sez, modello);
       case 'checklist':
       case 'traguardi': return sezioneChecklist(piano, sez, modello);
+      case 'argomenti': return sezioneArgomenti(piano, sez, modello, banca);
       case 'uda': return sezioneUda(piano, sez);
       case 'testo': {
         var t = model.valoreSezione(piano, sez).note;
@@ -132,11 +144,12 @@
       '<div class="doc-firma-docente">Il/La docente<br><span>' + esc(piano.docente || '') + '</span></div></div>';
   }
 
-  function renderPiano(piano, modello) {
+  // banca: banca personale di argomenti del docente (facoltativa).
+  function renderPiano(piano, modello, banca) {
     var n = 0;
     var corpo = model.sezioniAttive(modello).filter(function (s) { return s.tipo !== 'dati'; }).map(function (s) {
       n++;
-      return '<section class="doc-sezione"><h2>' + n + '. ' + esc(s.titolo) + '</h2>' + corpoSezione(piano, s, modello) + '</section>';
+      return '<section class="doc-sezione"><h2>' + n + '. ' + esc(s.titolo) + '</h2>' + corpoSezione(piano, s, modello, banca) + '</section>';
     }).join('');
     return '<article class="doc">' + intestazione(piano, modello) + corpo + firma(piano, modello) + '</article>';
   }
@@ -166,9 +179,9 @@
   ].join('\n');
 
   // Documento HTML autonomo che Word e LibreOffice aprono come .doc.
-  function documentoWord(piani, modello) {
+  function documentoWord(piani, modello, banca) {
     var corpo = piani.map(function (p, i) {
-      return (i ? '<br clear="all" style="page-break-before:always">' : '') + renderPiano(p, modello);
+      return (i ? '<br clear="all" style="page-break-before:always">' : '') + renderPiano(p, modello, banca);
     }).join('');
     return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
       '<head><meta charset="utf-8"><title>Piano di lavoro</title>' +

@@ -9,6 +9,7 @@
   var CHIAVE_MODELLO = 'pdl.modello';
   var CHIAVE_PIANI = 'pdl.piani';
   var CHIAVE_PREFERENZE = 'pdl.preferenze';
+  var CHIAVE_BANCA = 'pdl.banca';
 
   function leggi(chiave) {
     try {
@@ -46,6 +47,15 @@
     return scrivi(CHIAVE_PIANI, piani);
   }
 
+  // Banca personale di argomenti del docente.
+  function caricaBanca() {
+    return model.normalizzaBanca(leggi(CHIAVE_BANCA));
+  }
+
+  function salvaBanca(b) {
+    return scrivi(CHIAVE_BANCA, b);
+  }
+
   function preferenze() {
     return leggi(CHIAVE_PREFERENZE) || {};
   }
@@ -72,6 +82,8 @@
 
   root.PDL.store = {
     caricaModello: caricaModello,
+    caricaBanca: caricaBanca,
+    salvaBanca: salvaBanca,
     salvaModello: salvaModello,
     caricaPiani: caricaPiani,
     salvaPiani: salvaPiani,

@@ -8,6 +8,10 @@ della scuola secondaria di primo grado.
 - **Compilazione a colpi di spunta**: competenze chiave europee, traguardi delle Indicazioni
   nazionali per ogni disciplina, metodologie, strumenti, verifiche, criteri di valutazione,
   recupero e potenziamento, inclusione, educazione civica, rapporti con le famiglie.
+- **Argomenti trattati**: per ogni disciplina e per ogni classe (prima, seconda, terza) un elenco di
+  argomenti raggruppati (es. per Musica: Acustica, Strumenti, Lettura…) da spuntare; si possono
+  mostrare anche quelli delle altre classi. Gli argomenti svolti in più si aggiungono alla **banca
+  personale** del docente, che li ripropone in tutti i suoi piani ed è inclusa nei backup.
 - **Unità di apprendimento** con periodo, ore, nuclei tematici della disciplina, obiettivi e contenuti.
 - **Scorciatoie**: più classi in un colpo solo («A, B, C»), duplicazione, copia dal piano
   dell'anno precedente o di un collega, copia delle UdA da un altro piano.
@@ -43,12 +47,14 @@ browser. È importante fare periodicamente *Backup di tutti i piani* dall'elenco
 | --- | --- |
 | `index.html`, `css/style.css` | Pagina e stili (anche di stampa) |
 | `js/defaults.js` | Modello predefinito: sezioni, voci, discipline, traguardi e nuclei tematici |
+| `js/argomenti.js` | Argomenti proposti per disciplina e classe |
 | `js/model.js` | Logica dei dati (piani, completamento, import/export), senza DOM |
 | `js/documento.js` | Generazione del documento per anteprima, stampa e Word |
 | `js/store.js` | Salvataggio nel browser e caricamento del modello d'istituto |
 | `js/app.js` | Interfaccia |
 
-JavaScript senza dipendenze e senza passaggi di build. Test (Node.js 18+):
+JavaScript senza dipendenze e senza passaggi di build. Dopo ogni modifica a JS o CSS aumentare il
+numero `?v=` in `index.html`, così i browser non usano file vecchi rimasti in cache. Test (Node.js 18+):
 
 ```sh
 npm test

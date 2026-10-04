@@ -12,6 +12,7 @@
     modello: null,
     modelloSalvato: false,
     piani: [],
+    banca: {},
     selezionati: new Set(),
     filtri: { testo: '', anno: '', classe: '' }
   };
@@ -22,6 +23,7 @@
     situazione: 'Situazione di partenza',
     checklist: 'Elenco di voci',
     traguardi: 'Traguardi della disciplina',
+    argomenti: 'Argomenti per disciplina e classe',
     uda: 'Tabella UdA',
     testo: 'Testo libero'
   };
@@ -509,6 +511,7 @@
       case 'situazione': return editorSituazione(piano, s);
       case 'checklist': return editorChecklist(piano, s);
       case 'traguardi': return editorChecklist(piano, s);
+      case 'argomenti': return editorArgomenti(piano, s);
       case 'uda': return editorUda(piano, s);
       case 'testo': {
         const v = M.valoreSezione(piano, s);
@@ -534,11 +537,12 @@
           piano.disciplina = v;
           if (dopo && dopo.ore !== '' && (!piano.ore || (prima && String(prima.ore) === piano.ore))) piano.ore = String(dopo.ore);
           modificato(piano);
-          // Traguardi e nuclei tematici dipendono dalla disciplina.
+          // Traguardi, argomenti e nuclei tematici dipendono dalla disciplina.
           render({ mantieniScroll: true });
         }), 'campo largo-2'),
       campo('Classe', selezione([{ valore: '', testo: '—' }].concat(Object.keys(NOMI_CLASSI).map((k) => ({ valore: k, testo: NOMI_CLASSI[k] }))),
-        piano.classe, (v) => { piano.classe = v; modificato(piano); })),
+        // Gli argomenti proposti dipendono dalla classe.
+        piano.classe, (v) => { piano.classe = v; modificato(piano); render({ mantieniScroll: true }); })),
       campo('Sezione', testoCampo('sezione', { maxlength: 6 })),
       campo('Anno scolastico', testoCampo('anno')),
       campo('Ore settimanali', h('input', { type: 'number', min: 0, max: 40, value: piano.ore, oninput: (e) => { piano.ore = e.target.value; modificato(piano); } })),
@@ -621,6 +625,143 @@
           ? numero(v.campi[c.id], (x) => { v.campi[c.id] = x; modificato(piano); })
           : h('input', { type: 'text', value: v.campi[c.id] || '', oninput: (e) => { v.campi[c.id] = e.target.value; modificato(piano); } })))) : null,
       traguardi ? null : campo('Note e specificazioni', areaTesto(v.note, (t) => { v.note = t; modificato(piano); }, { rows: 2 }))
+    ];
+  }
+
+  function salvaBanca() {
+    if (!S.salvaBanca(stato.banca)) toast('Impossibile salvare la banca degli argomenti nel browser.', 'errore');
+  }
+
+  // Banca argomenti della disciplina: è il docente a scegliere quelli che
+  // svolge. Quelli della sua classe sono in evidenza, quelli delle altre classi
+  // in riquadri apribili. Gli argomenti che mancano si aggiungono alla banca
+  // personale del docente e vengono riproposti in tutti i suoi piani.
+  function editorArgomenti(piano, s) {
+    const v = M.valoreSezione(piano, s);
+    const box = h('div', { class: 'argomenti' });
+    const nomeClasse = (c) => NOMI_CLASSI[c].toLowerCase();
+    const NUOVO_GRUPPO = '\u0000nuovo';
+    let doppie = new Set();
+    // Riquadri delle altre classi aperti: all'inizio quelli con argomenti già scelti.
+    const aperte = new Set(M.gruppiArgomenti(stato.modello, piano, stato.banca)
+      .filter((g) => !g.propria && g.voci.some((x) => v.sel.includes(x))).map((g) => g.classe));
+
+    const cambia = (voci, attiva, ridisegna) => {
+      voci.forEach((x) => alterna(v.sel, x, attiva));
+      if (ridisegna) disegna();
+      modificato(piano);
+    };
+
+    const togliDallaBanca = (g, voce) => {
+      if (!confirm(`Togliere «${voce}» dalla tua banca di argomenti? Non ti verrà più proposto nei piani di ${piano.disciplina}.`)) return;
+      M.rimuoviDaBanca(stato.banca, piano.disciplina, g.classe, voce);
+      salvaBanca();
+      cambia([voce], false, true);
+    };
+
+    const gruppo = (g, etichetta) => {
+      const extra = !!g.extra;
+      const mie = new Set(g.personali || []);
+      const titolo = g.titolo || 'Argomenti';
+      const lista = h('div', { class: 'checklist' }, g.voci.map((voce) => {
+        const mia = mie.has(voce);
+        const casella = h('label', {
+          class: 'voce' + (extra ? ' extra' : '') + (mia ? ' mia' : ''),
+          title: extra ? 'Argomento non più presente nella banca' : (mia ? 'Argomento aggiunto da te' : null)
+        },
+        h('input', { type: 'checkbox', checked: v.sel.includes(voce), onchange: (e) => cambia([voce], e.target.checked, extra || doppie.has(voce)) }),
+        h('span', null, voce));
+        return mia ? h('span', { class: 'voce-mia' }, casella,
+          bottone('×', () => togliDallaBanca(g, voce), 'btn-togli', { 'aria-label': `Togli «${voce}» dalla tua banca`, title: 'Togli dalla tua banca' })) : casella;
+      }));
+      return h('div', { class: 'gruppo-argomenti' },
+        h('div', { class: 'gruppo-testa' },
+          h('h3', null, titolo, etichetta ? h('span', { class: 'etichetta-classe' }, etichetta) : null),
+          extra || g.voci.length < 2 ? null : h('div', { class: 'comandi-lista' },
+            bottone('Tutti', () => cambia(g.voci, true, true), 'btn-link', { 'aria-label': 'Seleziona tutti gli argomenti: ' + titolo }),
+            bottone('Nessuno', () => cambia(g.voci, false, true), 'btn-link', { 'aria-label': 'Deseleziona tutti gli argomenti: ' + titolo }))),
+        lista);
+    };
+
+    // Aggiunta di un argomento alla banca personale.
+    const inputVoce = h('input', { type: 'text', placeholder: 'es. Canti della tradizione del territorio', onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); aggiungiArgomento(); } } });
+    const inputGruppo = h('input', { type: 'text', placeholder: 'es. Musica e territorio', onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); aggiungiArgomento(); } } });
+    const campoGruppoNuovo = campo('Nome del nuovo gruppo', inputGruppo);
+    const selGruppo = h('select', { onchange: () => campoGruppoNuovo.classList.toggle('nascosto', selGruppo.value !== NUOVO_GRUPPO) });
+
+    function aggiornaGruppiForm(propri, preferito) {
+      const scelto = preferito || selGruppo.value || 'Altri argomenti';
+      const titoli = [...new Set(propri.map((g) => g.titolo).filter(Boolean))];
+      if (!titoli.some((t) => t.toLowerCase() === 'altri argomenti')) titoli.push('Altri argomenti');
+      selGruppo.replaceChildren(...titoli.map((t) => h('option', { value: t }, t)), h('option', { value: NUOVO_GRUPPO }, 'Nuovo gruppo…'));
+      if ([...selGruppo.options].some((o) => o.value === scelto)) selGruppo.value = scelto;
+      campoGruppoNuovo.classList.toggle('nascosto', selGruppo.value !== NUOVO_GRUPPO);
+    }
+
+    function aggiungiArgomento() {
+      const voce = inputVoce.value.trim();
+      if (!voce) { inputVoce.focus(); return; }
+      if (!piano.disciplina || !piano.classe) { toast('Indica prima disciplina e classe nei dati generali.', 'errore'); return; }
+      const titolo = selGruppo.value === NUOVO_GRUPPO ? inputGruppo.value.trim() : selGruppo.value;
+      if (!titolo) { toast('Scrivi il nome del nuovo gruppo.', 'errore'); inputGruppo.focus(); return; }
+      const giaPresente = M.gruppiArgomenti(stato.modello, piano, stato.banca).some((g) => g.propria && g.voci.includes(voce));
+      if (!giaPresente) {
+        M.aggiungiABanca(stato.banca, piano.disciplina, piano.classe, titolo, voce);
+        salvaBanca();
+      }
+      alterna(v.sel, voce, true);
+      inputVoce.value = '';
+      inputGruppo.value = '';
+      disegna(titolo);
+      modificato(piano);
+      toast(giaPresente ? `«${voce}» era già nella banca: l'ho spuntato.` : `«${voce}» aggiunto alla tua banca di ${piano.disciplina} (classe ${nomeClasse(piano.classe)}).`);
+      inputVoce.focus();
+    }
+
+    function disegna(gruppoPreferito) {
+      const gruppi = M.gruppiArgomenti(stato.modello, piano, stato.banca);
+      const conteggio = new Map();
+      gruppi.forEach((g) => g.voci.forEach((x) => conteggio.set(x, (conteggio.get(x) || 0) + 1)));
+      doppie = new Set([...conteggio].filter(([, n]) => n > 1).map(([x]) => x));
+      const extra = v.sel.filter((x) => !conteggio.has(x));
+      const propri = gruppi.filter((g) => g.propria);
+      box.replaceChildren();
+      if (!piano.disciplina) {
+        box.append(h('p', { class: 'nota' }, 'Scegli prima la disciplina nei dati generali: qui comparirà la banca degli argomenti.'));
+      } else if (!propri.length) {
+        box.append(h('p', { class: 'nota' }, `La banca non contiene ancora argomenti di ${piano.disciplina} per questa classe: aggiungi qui sotto quelli che svolgi.`));
+      }
+      propri.forEach((g) => box.append(gruppo(g, piano.classe ? '' : 'classe ' + nomeClasse(g.classe))));
+      M.CLASSI.filter((c) => gruppi.some((g) => !g.propria && g.classe === c)).forEach((c) => {
+        const gs = gruppi.filter((g) => !g.propria && g.classe === c);
+        const voci = new Set(gs.flatMap((g) => g.voci));
+        const scelti = [...voci].filter((x) => v.sel.includes(x)).length;
+        const riquadro = h('details', { class: 'altra-classe', open: aperte.has(c) },
+          h('summary', null, `Argomenti della classe ${nomeClasse(c)} (${voci.size})` + (scelti ? ` · ${scelti} scelti` : '')),
+          gs.map((g) => gruppo(g, '')));
+        riquadro.addEventListener('toggle', () => { if (riquadro.open) aperte.add(c); else aperte.delete(c); });
+        box.append(riquadro);
+      });
+      if (extra.length) box.append(gruppo({ titolo: 'Argomenti non più presenti nella banca', voci: extra, extra: true }, ''));
+      aggiornaGruppiForm(propri, gruppoPreferito);
+    }
+    disegna();
+
+    return [
+      box,
+      piano.disciplina ? h('div', { class: 'aggiungi-argomento' },
+        h('h3', null, 'Svolgi un argomento che non c\'è?'),
+        h('p', { class: 'nota' }, 'Scrivilo qui: viene spuntato in questo piano e salvato nella tua banca personale, così lo ritrovi in tutti i tuoi piani di questa disciplina e classe.'),
+        h('div', { class: 'riga-aggiungi' },
+          campo('Argomento', inputVoce, 'campo largo'),
+          campo('Gruppo', selGruppo),
+          campoGruppoNuovo,
+          bottone('Aggiungi', aggiungiArgomento, 'btn primario'))) : null,
+      // Voci scritte a mano con la versione precedente dell'app.
+      String(v.altro || '').trim() ? campo('Altri argomenti scritti a mano (uno per riga)', areaTesto(v.altro, (t) => { v.altro = t; modificato(piano); }, { rows: 2 }), 'campo altro') : null,
+      campo('Note e specificazioni', areaTesto(v.note, (t) => { v.note = t; modificato(piano); }, {
+        rows: 2, placeholder: 'es. L\'ordine e l\'approfondimento degli argomenti potranno variare in base alle esigenze della classe.'
+      }))
     ];
   }
 
@@ -720,20 +861,20 @@
           bottone('Stampa o salva PDF', () => window.print(), 'btn primario'),
           bottone('Scarica Word', () => scaricaWord(piani))),
         h('p', { class: 'nota' }, 'Per il PDF scegli «Salva come PDF» come stampante nella finestra di stampa.')),
-      ...piani.map((p) => h('div', { class: 'foglio', html: D.renderPiano(p, stato.modello) })));
+      ...piani.map((p) => h('div', { class: 'foglio', html: D.renderPiano(p, stato.modello, stato.banca) })));
   }
 
   function scaricaWord(piani) {
     if (!piani.length) return;
     salvaPianiOra();
     const nome = piani.length === 1 ? M.nomeFile(piani[0], 'doc') : `Piani di lavoro (${piani.length}).doc`;
-    scarica(nome, '﻿' + D.documentoWord(piani, stato.modello), 'application/msword');
+    scarica(nome, '﻿' + D.documentoWord(piani, stato.modello, stato.banca), 'application/msword');
     toast('Documento Word scaricato.');
   }
 
   function esportaPiani(piani, nome) {
     salvaPianiOra();
-    scarica(nome, JSON.stringify(M.pacchettoPiani(piani), null, 2), 'application/json');
+    scarica(nome, JSON.stringify(M.pacchettoPiani(piani, M.bancaPerPiani(stato.banca, piani)), null, 2), 'application/json');
     toast(piani.length === 1 ? 'Piano esportato.' : `${piani.length} piani esportati.`);
   }
 
@@ -751,6 +892,7 @@
       const { piani, stat } = M.unisciPiani(stato.piani, r.piani);
       stato.piani = piani;
       salvaPianiOra();
+      if (Object.keys(r.banca).length) { M.unisciBanca(stato.banca, r.banca); salvaBanca(); }
       toast(`Importazione completata: ${stat.aggiunti} nuovi, ${stat.aggiornati} aggiornati` + (stat.ignorati ? `, ${stat.ignorati} già presenti.` : '.'));
       vai('#/piani');
     }
@@ -822,14 +964,15 @@
         dettagli.push(campo(s.tipo === 'situazione' ? 'Strumenti di rilevazione proposti (uno per riga)' : 'Voci proposte (una per riga)',
           areaTesto(s.opzioni.join('\n'), (x) => { s.opzioni = M.righe(x); cambia(); }, { rows: 6 })));
       }
-      if (s.tipo === 'checklist' || s.tipo === 'situazione' || s.tipo === 'testo') {
+      if (s.tipo === 'checklist' || s.tipo === 'situazione' || s.tipo === 'testo' || s.tipo === 'argomenti') {
         dettagli.push(campo('Testo già inserito nei nuovi piani (modificabile dal docente)', areaTesto(s.testo, (x) => { s.testo = x; cambia(); }, { rows: 2 })));
       }
-      if (s.tipo === 'traguardi' || s.tipo === 'uda') {
-        dettagli.push(h('p', { class: 'nota' }, s.tipo === 'traguardi'
-          ? 'I traguardi dipendono dalla disciplina: si modificano più sotto, nella sezione «Discipline».'
-          : 'I nuclei tematici proposti dipendono dalla disciplina: si modificano più sotto, nella sezione «Discipline».'));
-      }
+      const notaDiscipline = {
+        traguardi: 'I traguardi dipendono dalla disciplina: si modificano più sotto, nella sezione «Discipline».',
+        argomenti: 'Gli argomenti dipendono dalla disciplina e dalla classe: si modificano più sotto, nella sezione «Discipline».',
+        uda: 'I nuclei tematici proposti dipendono dalla disciplina: si modificano più sotto, nella sezione «Discipline».'
+      }[s.tipo];
+      if (notaDiscipline) dettagli.push(h('p', { class: 'nota' }, notaDiscipline));
       dettagli.push(h('label', { class: 'voce piccola' },
         h('input', { type: 'checkbox', checked: s.facoltativa, onchange: (e) => { s.facoltativa = e.target.checked; cambia(); } }),
         h('span', null, 'Facoltativa (non conta nel completamento del piano)')));
@@ -889,6 +1032,12 @@
         return;
       }
       d.nome = nuovo;
+      if (stato.banca[vecchio]) {
+        // La banca personale segue il nuovo nome della disciplina.
+        M.unisciBanca(stato.banca, { [nuovo]: stato.banca[vecchio] });
+        delete stato.banca[vecchio];
+        salvaBanca();
+      }
       const coinvolti = stato.piani.filter((p) => p.disciplina === vecchio);
       coinvolti.forEach((p) => { p.disciplina = nuovo; });
       if (coinvolti.length) { salvaPianiOra(); toast(`Aggiornati ${coinvolti.length} piani con il nuovo nome.`); }
@@ -898,14 +1047,20 @@
 
     function schedaDisciplina(d, i) {
       const usata = stato.piani.filter((p) => p.disciplina === d.nome).length;
+      if (!d.argomenti) d.argomenti = { 1: [], 2: [], 3: [] };
+      const nArgomenti = M.CLASSI.reduce((n, c) => n + (d.argomenti[c] || []).reduce((k, g) => k + g.voci.length, 0), 0);
       return h('details', { class: 'disciplina' },
-        h('summary', null, h('strong', null, d.nome), h('span', { class: 'nota' }, ` ${d.traguardi.length} traguardi · ${d.nuclei.length} nuclei tematici` + (usata ? ` · usata in ${usata} piani` : ''))),
+        h('summary', null, h('strong', null, d.nome), h('span', { class: 'nota' }, ` ${d.traguardi.length} traguardi · ${nArgomenti} argomenti · ${d.nuclei.length} nuclei tematici` + (usata ? ` · usata in ${usata} piani` : ''))),
         h('div', { class: 'dettagli' },
           h('div', { class: 'griglia-2' },
             campo('Nome', h('input', { type: 'text', value: d.nome, onchange: (e) => rinomina(d, e.target) })),
             campo('Ore settimanali proposte', h('input', { type: 'number', min: 0, max: 40, value: d.ore, oninput: (e) => { d.ore = e.target.value === '' ? '' : Number(e.target.value); modelloModificato(); } }))),
           campo('Nuclei tematici (uno per riga)', areaTesto(d.nuclei.join('\n'), (x) => { d.nuclei = M.righe(x); modelloModificato(); }, { rows: 4 })),
           campo('Traguardi per lo sviluppo delle competenze (uno per riga)', areaTesto(d.traguardi.join('\n'), (x) => { d.traguardi = M.righe(x); modelloModificato(); }, { rows: 8 })),
+          h('h3', null, 'Banca argomenti di base, per classe'),
+          h('p', { class: 'nota' }, 'È la base comune: ogni docente sceglie da qui gli argomenti che svolge e può aggiungerne di propri nella sua banca personale. Un argomento per riga. Le righe che finiscono con i due punti sono i titoli dei gruppi, ad esempio «Acustica:» seguito dagli argomenti di acustica.'),
+          h('div', { class: 'griglia-3' }, M.CLASSI.map((c) => campo('Classe ' + NOMI_CLASSI[c].toLowerCase(),
+            areaTesto(M.testoArgomenti(d.argomenti[c]), (x) => { d.argomenti[c] = M.leggiArgomenti(x); modelloModificato(); }, { rows: 10 })))),
           bottone('Elimina disciplina', () => {
             if (!confirm(`Eliminare «${d.nome}» dal modello?` + (usata ? ` I ${usata} piani che la usano restano, ma senza traguardi proposti.` : ''))) return;
             m.discipline.splice(i, 1); modelloModificato(); disegna();
@@ -918,12 +1073,12 @@
 
     return h('section', { class: 'card' },
       h('h2', null, 'Discipline'),
-      h('p', { class: 'nota' }, 'Per ogni disciplina: traguardi (dalle Indicazioni nazionali 2012) e nuclei tematici proposti ai docenti. Rinominando una disciplina si aggiornano anche i piani salvati in questo browser.'),
+      h('p', { class: 'nota' }, 'Per ogni disciplina: traguardi (dalle Indicazioni nazionali 2012), argomenti per classe e nuclei tematici proposti ai docenti. Rinominando una disciplina si aggiornano anche i piani salvati in questo browser.'),
       lista,
       h('div', { class: 'azioni' }, bottone('+ Aggiungi disciplina', () => {
         let n = 1;
         while (m.discipline.some((d) => d.nome === 'Nuova disciplina ' + n)) n++;
-        m.discipline.push({ nome: 'Nuova disciplina ' + n, ore: '', nuclei: [], traguardi: [] });
+        m.discipline.push({ nome: 'Nuova disciplina ' + n, ore: '', nuclei: [], traguardi: [], argomenti: { 1: [], 2: [], 3: [] } });
         modelloModificato();
         disegna();
         const ultimo = lista.lastElementChild;
@@ -972,7 +1127,7 @@
         h('ol', null,
           h('li', null, 'Apri «Modello d\'istituto» e inserisci il nome della scuola e la città.'),
           h('li', null, 'Scegli le sezioni da includere, il loro ordine e le voci proposte (metodologie, strumenti, verifiche…).'),
-          h('li', null, 'Controlla le discipline: traguardi e nuclei tematici sono già inseriti e si possono adattare al curricolo d\'istituto.'),
+          h('li', null, 'Controlla le discipline: traguardi, argomenti per classe e nuclei tematici sono già inseriti e si possono adattare al curricolo d\'istituto.'),
           h('li', null, 'Premi «Esporta il modello» e distribuisci il file ai docenti.'))),
       blocco('Per i docenti',
         h('ol', null,
@@ -984,6 +1139,7 @@
         h('ul', null,
           h('li', null, h('strong', null, 'Riparti dall\'anno scorso: '), 'crea il nuovo piano scegliendo «Copia i contenuti da un piano esistente». Viene azzerata solo la situazione di partenza.'),
           h('li', null, h('strong', null, 'Stessa disciplina in più classi: '), 'compila un piano, poi «Duplica» e indica le altre sezioni.'),
+          h('li', null, h('strong', null, 'Argomenti: '), 'spunta dalla banca della disciplina quelli che svolgi; se ne svolgi altri, aggiungili con «Svolgi un argomento che non c\'è?». Restano nella tua banca personale e li ritrovi nei piani successivi.'),
           h('li', null, h('strong', null, 'Unità di apprendimento: '), 'usa «Copia le unità da un altro piano» per riprendere la programmazione di un collega o di un altro anno.'),
           h('li', null, h('strong', null, 'Consiglio di classe: '), 'importa i piani dei colleghi, filtra per classe, selezionali e stampali o scaricali in un unico documento.'))),
       blocco('Dove sono salvati i dati',
@@ -991,6 +1147,7 @@
         h('ul', null,
           h('li', null, 'Fai periodicamente «Backup di tutti i piani» dall\'elenco e conserva il file.'),
           h('li', null, 'Per passare a un altro computer esporta i piani e importali lì con «Importa file».'),
+          h('li', null, 'Anche la tua banca personale di argomenti è salvata nel browser ed è inclusa nei backup e nei file esportati.'),
           h('li', null, 'Cancellare i dati di navigazione del browser elimina anche i piani non esportati.'))),
       blocco('Riferimenti',
         h('ul', null,
@@ -1023,6 +1180,7 @@
     stato.modello = salvato || M.normalizzaModello(null);
     stato.modelloSalvato = !!salvato;
     stato.piani = S.caricaPiani();
+    stato.banca = S.caricaBanca();
 
     document.getElementById('btn-importa').addEventListener('click', importaFile);
     const stile = document.createElement('style');
