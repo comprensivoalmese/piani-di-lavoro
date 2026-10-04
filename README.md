@@ -54,7 +54,7 @@ degli account dei docenti, il file del modello (cartella `scuole/`) e le e-mail 
 
 `scuole/ic-almese.json` è il modello dell'Istituto Comprensivo di Almese, ricavato dal modello cartaceo
 dei piani di lavoro. Le discipline non sono nel file: si usano quelle predefinite dell'app.
-Finché l'accesso con Google non è attivo, `modelloPubblico` lo fa caricare a tutti.
+Con l'accesso attivo `modelloPubblico` è vuoto: chi non accede usa il modello predefinito dell'app.
 
 ## Dati
 

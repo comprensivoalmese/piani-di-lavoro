@@ -14,11 +14,11 @@
   root.PDL.config = {
     // ID client OAuth di Google (console.cloud.google.com → API e servizi → Credenziali).
     // Vuoto: l'accesso con Google è disattivato.
-    googleClientId: '',
+    googleClientId: '503455228310-0ffknc72pbt2hohunmrib29q33qrtoaf.apps.googleusercontent.com',
 
     // Modello caricato per chi non accede con Google. Vuoto: modello predefinito dell'app.
     // Quando l'accesso è attivo va lasciato vuoto, così ogni scuola riceve solo il proprio.
-    modelloPubblico: 'scuole/ic-almese.json',
+    modelloPubblico: '',
 
     // Una voce per scuola: dominio Google Workspace degli account dei docenti,
     // file del modello (nella cartella scuole/) ed e-mail dei referenti.
