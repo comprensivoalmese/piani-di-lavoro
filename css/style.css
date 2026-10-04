@@ -212,7 +212,7 @@ fieldset:disabled input, fieldset:disabled textarea, fieldset:disabled select { 
 .gruppo-argomenti { margin-bottom: .6rem; }
 .gruppo-testa { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
 .gruppo-testa h3 { margin: .8rem 0 .4rem; }
-.gruppo-testa .comandi-lista { margin: 0; }
+.gruppo-testa .comandi-lista { margin: 0 0 0 auto; }
 .etichetta-classe { margin-left: .5rem; font-weight: normal; text-transform: none; letter-spacing: 0; font-size: .8rem; }
 .altra-classe { border: 1px solid var(--bordo); border-radius: 8px; padding: .35rem .8rem; margin: .7rem 0; background: #fcfdff; }
 .altra-classe > summary { font-weight: 600; }

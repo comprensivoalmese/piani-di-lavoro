@@ -259,12 +259,21 @@
     return gruppi.filter(function (g) { return g.voci.length; });
   }
 
-  function argomentiPredefiniti(nome) {
-    var a = (CATALOGO_ARGOMENTI || {})[nome] || {};
+  var CATALOGO_OBIETTIVI = root.PDL && root.PDL.obiettivi;
+  if (!CATALOGO_OBIETTIVI && typeof require === 'function') CATALOGO_OBIETTIVI = require('./obiettivi.js');
+
+  // Banche per disciplina e classe: argomenti, obiettivi specifici, obiettivi minimi.
+  var CATALOGHI = ['argomenti', 'obiettivi', 'obiettiviMinimi'];
+
+  function catalogoPredefinito(catalogo, nome) {
+    var fonte = catalogo === 'argomenti' ? CATALOGO_ARGOMENTI : (CATALOGO_OBIETTIVI || {})[catalogo];
+    var a = (fonte || {})[nome] || {};
     return { 1: leggiArgomenti(a[1]), 2: leggiArgomenti(a[2]), 3: leggiArgomenti(a[3]) };
   }
 
-  DISCIPLINE.forEach(function (d) { d.argomenti = argomentiPredefiniti(d.nome); });
+  DISCIPLINE.forEach(function (d) {
+    CATALOGHI.forEach(function (c) { d[c] = catalogoPredefinito(c, d.nome); });
+  });
 
   var SEZIONI = [
     {
@@ -317,8 +326,27 @@
       guida: 'Indicazioni nazionali per il curricolo (2012): traguardi al termine della scuola secondaria di primo grado. L\'elenco cambia in base alla disciplina scelta.'
     },
     {
+      id: 'obiettivi',
+      tipo: 'argomenti',
+      catalogo: 'obiettivi',
+      titolo: 'Obiettivi specifici di apprendimento (conoscenze e abilità)',
+      attiva: true,
+      guida: 'Banca degli obiettivi della disciplina per la classe, divisi per nucleo: spunta quelli che perseguirai. Se ne mancano, aggiungili in fondo alla sezione.',
+      testo: ''
+    },
+    {
+      id: 'obiettiviMinimi',
+      tipo: 'argomenti',
+      catalogo: 'obiettiviMinimi',
+      titolo: 'Obiettivi minimi',
+      attiva: true,
+      guida: 'Gli obiettivi essenziali che tutti gli alunni devono raggiungere: spunta quelli previsti per la classe.',
+      testo: ''
+    },
+    {
       id: 'argomenti',
       tipo: 'argomenti',
+      catalogo: 'argomenti',
       titolo: 'Contenuti: argomenti trattati',
       attiva: true,
       guida: 'Banca argomenti della disciplina: spunta quelli che tratterai durante l\'anno. Se svolgi argomenti diversi, aggiungili in fondo alla sezione: resteranno nella tua banca personale.',
@@ -506,7 +534,7 @@
 
   function modelloPredefinito() {
     return {
-      schema: 2,
+      schema: 3,
       aggiornato: '',
       bloccato: false,
       scuola: {
@@ -527,7 +555,8 @@
     modelloPredefinito: modelloPredefinito,
     annoScolasticoCorrente: annoScolasticoCorrente,
     leggiArgomenti: leggiArgomenti,
-    argomentiPredefiniti: argomentiPredefiniti,
+    CATALOGHI: CATALOGHI,
+    catalogoPredefinito: catalogoPredefinito,
     TIPI_SEZIONE: ['dati', 'situazione', 'checklist', 'traguardi', 'argomenti', 'uda', 'testo']
   };
 

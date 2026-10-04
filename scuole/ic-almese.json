@@ -2,8 +2,8 @@
   "formato": "modello-piano-di-lavoro",
   "versione": 1,
   "modello": {
-    "schema": 2,
-    "aggiornato": "2026-10-04T17:25:24.000Z",
+    "schema": 3,
+    "aggiornato": "2026-10-04T17:49:05.000Z",
     "bloccato": true,
     "scuola": {
       "nome": "Istituto Comprensivo di Almese",
@@ -146,27 +146,29 @@
       },
       {
         "id": "obiettivi",
-        "tipo": "testo",
+        "tipo": "argomenti",
         "titolo": "Obiettivi specifici della disciplina (conoscenze e abilità)",
         "attiva": true,
         "facoltativa": false,
         "personalizzata": true,
-        "guida": "Per ciascun nucleo della disciplina, le conoscenze e le abilità previste per la classe.",
+        "guida": "Banca degli obiettivi della disciplina per la classe, divisi per nucleo: spunta quelli che perseguirai. Se ne mancano, aggiungili in fondo alla sezione.",
         "opzioni": [],
         "campi": [],
-        "testo": ""
+        "testo": "",
+        "catalogo": "obiettivi"
       },
       {
         "id": "obiettiviMinimi",
-        "tipo": "testo",
+        "tipo": "argomenti",
         "titolo": "Obiettivi minimi",
         "attiva": true,
         "facoltativa": false,
         "personalizzata": true,
-        "guida": "Gli obiettivi essenziali che tutti gli alunni devono raggiungere.",
+        "guida": "Gli obiettivi essenziali che tutti gli alunni devono raggiungere: spunta quelli previsti per la classe.",
         "opzioni": [],
         "campi": [],
-        "testo": ""
+        "testo": "",
+        "catalogo": "obiettiviMinimi"
       },
       {
         "id": "metodologie",
@@ -345,7 +347,8 @@
         "guida": "Banca argomenti della disciplina: spunta quelli che tratterai durante l'anno. Se svolgi argomenti diversi, aggiungili in fondo alla sezione: resteranno nella tua banca personale.",
         "opzioni": [],
         "campi": [],
-        "testo": ""
+        "testo": "",
+        "catalogo": "argomenti"
       },
       {
         "id": "inclusione",

@@ -28,7 +28,7 @@ test('il modello predefinito contiene discipline con traguardi e nuclei', () => 
 
 test('normalizzaModello rimette la sezione dati in testa e scarta voci non valide', () => {
   const m = M.normalizzaModello({
-    schema: 2,
+    schema: 3,
     sezioni: [
       { id: 'x', tipo: 'checklist', titolo: 'X', opzioni: ['a', '', '  b '] },
       { id: 'y', tipo: 'sconosciuto' },
@@ -199,36 +199,105 @@ test('argomenti scelti: raggruppati nell\'ordine del modello, con le voci aggiun
   assert.match(html, /Altri argomenti<\/p><ul><li>Voce sparita<\/li><li>Musica e cinema/);
 });
 
-test('un modello salvato con la versione precedente riceve sezione e argomenti', () => {
+test('un modello salvato con la versione 1 riceve le banche di argomenti e obiettivi', () => {
   const vecchio = M.normalizzaModello(null);
   vecchio.schema = 1;
   vecchio.sezioni = vecchio.sezioni.filter((s) => s.tipo !== 'argomenti');
-  vecchio.discipline.forEach((d) => { delete d.argomenti; });
+  vecchio.discipline.forEach((d) => { delete d.argomenti; delete d.obiettivi; delete d.obiettiviMinimi; });
   vecchio.discipline.push({ nome: 'Coro', nuclei: [], traguardi: [] });
   const m = M.normalizzaModello(JSON.parse(JSON.stringify(vecchio)));
-  assert.equal(m.schema, 2);
+  assert.equal(m.schema, 3);
   const ids = m.sezioni.map((s) => s.id);
-  assert.equal(ids.indexOf('argomenti'), ids.indexOf('traguardi') + 1);
+  const t = ids.indexOf('traguardi');
+  assert.deepEqual(ids.slice(t, t + 4), ['traguardi', 'obiettivi', 'obiettiviMinimi', 'argomenti']);
+  assert.deepEqual(m.sezioni.slice(t + 1, t + 4).map((s) => s.catalogo), ['obiettivi', 'obiettiviMinimi', 'argomenti']);
   assert.ok(M.trovaDisciplina(m, 'Musica').argomenti['1'].length > 0);
+  assert.ok(M.trovaDisciplina(m, 'Musica').obiettivi['1'].length > 0);
   assert.deepEqual(M.trovaDisciplina(m, 'Coro').argomenti, { 1: [], 2: [], 3: [] });
-  // Dalla versione 2 le scelte del referente vengono rispettate.
+  // Dalla versione 3 le scelte del referente vengono rispettate.
   m.sezioni = m.sezioni.filter((s) => s.tipo !== 'argomenti');
-  M.trovaDisciplina(m, 'Musica').argomenti = { 1: [], 2: [], 3: [] };
+  M.trovaDisciplina(m, 'Musica').obiettivi = { 1: [], 2: [], 3: [] };
   const di_nuovo = M.normalizzaModello(JSON.parse(JSON.stringify(m)));
   assert.ok(!di_nuovo.sezioni.some((s) => s.tipo === 'argomenti'));
-  assert.deepEqual(M.trovaDisciplina(di_nuovo, 'Musica').argomenti['1'], []);
+  assert.deepEqual(M.trovaDisciplina(di_nuovo, 'Musica').obiettivi['1'], []);
 });
 
-test('banca personale: gli argomenti aggiunti dal docente si uniscono ai gruppi della banca', () => {
+test('versione 2: gli obiettivi scritti come testo libero diventano banche e il testo resta nelle note', () => {
+  const v2 = {
+    schema: 2,
+    sezioni: [
+      { id: 'dati', tipo: 'dati' },
+      { id: 'traguardi', tipo: 'traguardi', titolo: 'Traguardi' },
+      { id: 'obiettivi', tipo: 'testo', titolo: 'Obiettivi della scuola' },
+      { id: 'argomenti', tipo: 'argomenti', titolo: 'Contenuti' }
+    ]
+  };
+  const m = M.normalizzaModello(v2);
+  assert.deepEqual(m.sezioni.map((s) => [s.id, s.tipo, s.catalogo]), [
+    ['dati', 'dati', undefined],
+    ['traguardi', 'traguardi', undefined],
+    ['obiettivi', 'argomenti', 'obiettivi'],
+    ['obiettiviMinimi', 'argomenti', 'obiettiviMinimi'],
+    ['argomenti', 'argomenti', 'argomenti']
+  ]);
+  assert.equal(m.sezioni[2].titolo, 'Obiettivi della scuola', 'il titolo scelto dalla scuola resta');
+  const p = M.nuovoPiano(m, { disciplina: 'Musica', classe: '1', sezione: 'A' });
+  p.valori.obiettivi = { note: 'Testo scritto a mano' };
+  const v = M.valoreSezione(p, m.sezioni[2]);
+  assert.deepEqual(v.sel, []);
+  assert.equal(v.note, 'Testo scritto a mano');
+  assert.match(D.renderPiano(p, m), /Testo scritto a mano/);
+});
+
+test('ogni disciplina predefinita propone obiettivi e obiettivi minimi per le tre classi', () => {
+  const m = modello();
+  m.discipline.forEach((d) => {
+    M.CLASSI.forEach((c) => {
+      assert.ok(d.obiettivi[c].length > 0, `${d.nome}: nessun obiettivo per la classe ${c}`);
+      assert.ok(d.obiettiviMinimi[c].length > 0, `${d.nome}: nessun obiettivo minimo per la classe ${c}`);
+    });
+  });
+  const musica = M.trovaDisciplina(m, 'Musica');
+  assert.deepEqual(musica.obiettivi['1'].map((g) => g.titolo), [
+    'Comprendere e usare i linguaggi specifici',
+    'Esprimersi vocalmente e con l\'uso di mezzi strumentali',
+    'Ascoltare e comprendere i fenomeni sonori e i messaggi musicali'
+  ]);
+  assert.equal(musica.obiettiviMinimi['3'].length, 1, 'gli obiettivi minimi non sono divisi in gruppi');
+  assert.equal(musica.obiettiviMinimi['3'][0].titolo, '');
+  assert.equal(musica.obiettiviMinimi['3'][0].voci.length, 5);
+});
+
+test('obiettivi scelti: raggruppati per nucleo; i minimi in un unico elenco', () => {
+  const m = modello();
+  const p = M.nuovoPiano(m, { docente: 'Leto', disciplina: 'Musica', classe: '2', sezione: 'A' });
+  p.valori.obiettivi.sel = ['Eseguire accompagnamenti ritmici', 'Riconoscere le funzioni della musica'];
+  p.valori.obiettiviMinimi.sel = ['Eseguire semplici accompagnamenti ritmici', 'Leggere semplici brani con i segni studiati'];
+  p.valori.obiettiviMinimi.altro = 'Obiettivo scritto a mano';
+  const r = M.argomentiScelti(p, sezione(m, 'obiettivi'), m);
+  assert.deepEqual(r.gruppi.map((g) => g.titolo), [
+    'Esprimersi vocalmente e con l\'uso di mezzi strumentali',
+    'Ascoltare e comprendere i fenomeni sonori e i messaggi musicali'
+  ]);
+  const minimi = M.argomentiScelti(p, sezione(m, 'obiettiviMinimi'), m);
+  assert.deepEqual(minimi.gruppi, [{ titolo: '', voci: ['Leggere semplici brani con i segni studiati', 'Eseguire semplici accompagnamenti ritmici'] }]);
+  const html = D.renderPiano(p, m);
+  assert.match(html, /Obiettivi minimi<\/h2><ul><li>Leggere semplici brani/);
+  assert.match(html, /<li>Obiettivo scritto a mano<\/li>/);
+  assert.doesNotMatch(html, /Altri obiettivi minimi/, 'senza gruppi non serve il titolo «altri»');
+});
+
+test('banca personale: le voci aggiunte dal docente si uniscono ai gruppi della banca', () => {
   const m = modello();
   const banca = {};
-  assert.equal(M.aggiungiABanca(banca, 'Musica', '1', 'acustica', 'Il rumore'), true);
-  M.aggiungiABanca(banca, 'Musica', '1', 'Musica e territorio', 'Canti della tradizione');
-  M.aggiungiABanca(banca, 'Musica', '1', 'Musica e territorio', 'Canti della tradizione');
-  assert.equal(M.aggiungiABanca(banca, 'Musica', '', 'X', 'senza classe'), false);
-  assert.equal(M.aggiungiABanca(banca, 'Musica', '1', 'X', '   '), false);
+  assert.equal(M.aggiungiABanca(banca, 'argomenti', 'Musica', '1', 'acustica', 'Il rumore'), true);
+  M.aggiungiABanca(banca, 'argomenti', 'Musica', '1', 'Musica e territorio', 'Canti della tradizione');
+  M.aggiungiABanca(banca, 'argomenti', 'Musica', '1', 'Musica e territorio', 'Canti della tradizione');
+  assert.equal(M.aggiungiABanca(banca, 'argomenti', 'Musica', '', 'X', 'senza classe'), false);
+  assert.equal(M.aggiungiABanca(banca, 'argomenti', 'Musica', '1', 'X', '   '), false);
+  assert.equal(M.aggiungiABanca(banca, 'sconosciuto', 'Musica', '1', 'X', 'voce'), false);
   const p = M.nuovoPiano(m, { disciplina: 'Musica', classe: '1', sezione: 'A' });
-  const gruppi = M.gruppiArgomenti(m, p, banca);
+  const gruppi = M.gruppiArgomenti(m, p, banca, 'argomenti');
   const acustica = gruppi.find((g) => g.titolo === 'Acustica');
   assert.ok(acustica.voci.includes('Il rumore'));
   assert.deepEqual(acustica.personali, ['Il rumore']);
@@ -236,9 +305,11 @@ test('banca personale: gli argomenti aggiunti dal docente si uniscono ai gruppi 
   assert.equal(territorio.length, 1);
   assert.deepEqual(territorio[0].voci, ['Canti della tradizione']);
   assert.equal(territorio[0].propria, true);
+  // Le banche sono separate: gli argomenti personali non finiscono negli obiettivi.
+  assert.ok(!M.gruppiArgomenti(m, p, banca, 'obiettivi').some((g) => g.voci.includes('Il rumore')));
   // In un piano di terza gli argomenti personali di prima sono tra quelli delle altre classi.
   const p3 = M.nuovoPiano(m, { disciplina: 'Musica', classe: '3', sezione: 'A' });
-  assert.equal(M.gruppiArgomenti(m, p3, banca).find((g) => g.titolo === 'Musica e territorio').propria, false);
+  assert.equal(M.gruppiArgomenti(m, p3, banca, 'argomenti').find((g) => g.titolo === 'Musica e territorio').propria, false);
   // Nel documento gli argomenti personali stanno nel loro gruppo.
   p.valori.argomenti.sel = ['Il rumore', 'Canti della tradizione'];
   const r = M.argomentiScelti(p, sezione(m, 'argomenti'), m, banca);
@@ -250,28 +321,45 @@ test('banca personale: gli argomenti aggiunti dal docente si uniscono ai gruppi 
   assert.match(D.renderPiano(p, m, banca), /Musica e territorio<\/p><ul><li>Canti della tradizione/);
   // Senza banca le voci restano comunque nel documento, tra gli altri argomenti.
   assert.deepEqual(M.argomentiScelti(p, sezione(m, 'argomenti'), m).altri, ['Il rumore', 'Canti della tradizione']);
-  M.rimuoviDaBanca(banca, 'Musica', '1', 'Il rumore');
-  M.rimuoviDaBanca(banca, 'Musica', '1', 'Canti della tradizione');
-  assert.deepEqual(banca, {}, 'una disciplina senza argomenti personali sparisce dalla banca');
+  M.rimuoviDaBanca(banca, 'argomenti', 'Musica', '1', 'Il rumore');
+  M.rimuoviDaBanca(banca, 'argomenti', 'Musica', '1', 'Canti della tradizione');
+  assert.deepEqual(banca, { argomenti: {} }, 'una disciplina senza voci personali sparisce dalla banca');
 });
 
-test('banca personale: esportazione con i piani e unione all\'importazione', () => {
+test('banca personale: esportazione con i piani, unione all\'importazione e formato precedente', () => {
   const m = modello();
   const banca = {};
-  M.aggiungiABanca(banca, 'Musica', '2', 'Storia della musica', 'Il melodramma');
-  M.aggiungiABanca(banca, 'Storia', '1', 'Il Basso Medioevo', 'Le città marinare');
+  M.aggiungiABanca(banca, 'argomenti', 'Musica', '2', 'Storia della musica', 'Il melodramma');
+  M.aggiungiABanca(banca, 'obiettivi', 'Musica', '2', 'Ascoltare e comprendere i fenomeni sonori e i messaggi musicali', 'Riconoscere la forma rondò');
+  M.aggiungiABanca(banca, 'argomenti', 'Storia', '1', 'Il Basso Medioevo', 'Le città marinare');
   const p = M.nuovoPiano(m, { disciplina: 'Musica', classe: '2', sezione: 'B' });
   const pacchetto = M.pacchettoPiani([p], M.bancaPerPiani(banca, [p]));
-  assert.deepEqual(Object.keys(pacchetto.banca), ['Musica'], 'si esporta solo la banca delle discipline dei piani');
+  assert.deepEqual(Object.keys(pacchetto.banca).sort(), ['argomenti', 'obiettivi']);
+  assert.deepEqual(Object.keys(pacchetto.banca.argomenti), ['Musica'], 'si esporta solo la banca delle discipline dei piani');
   assert.equal(M.pacchettoPiani([p], {}).banca, undefined);
   const letto = M.leggiPacchetto(JSON.stringify(pacchetto));
   const mia = {};
-  M.aggiungiABanca(mia, 'Musica', '2', 'Storia della musica', 'Il Barocco veneziano');
+  M.aggiungiABanca(mia, 'argomenti', 'Musica', '2', 'Storia della musica', 'Il Barocco veneziano');
   M.unisciBanca(mia, letto.banca);
-  assert.deepEqual(mia.Musica['2'], [{ titolo: 'Storia della musica', voci: ['Il Barocco veneziano', 'Il melodramma'] }]);
-  assert.deepEqual(M.leggiPacchetto(JSON.stringify(M.pacchettoPiani([p]))).banca, {});
+  assert.deepEqual(mia.argomenti.Musica['2'], [{ titolo: 'Storia della musica', voci: ['Il Barocco veneziano', 'Il melodramma'] }]);
+  assert.deepEqual(mia.obiettivi.Musica['2'][0].voci, ['Riconoscere la forma rondò']);
+  assert.deepEqual(M.leggiPacchetto(JSON.stringify(M.pacchettoPiani([p]))).banca, { argomenti: {}, obiettivi: {}, obiettiviMinimi: {} });
+  // Le banche salvate con la versione precedente contenevano solo argomenti.
   assert.deepEqual(M.normalizzaBanca({ '': {}, Vuota: { 1: [] }, Arte: { 1: [{ titolo: 'X', voci: ['a', ''] }] } }),
-    { Arte: { 1: [{ titolo: 'X', voci: ['a'] }], 2: [], 3: [] } });
+    { argomenti: { Arte: { 1: [{ titolo: 'X', voci: ['a'] }], 2: [], 3: [] } }, obiettivi: {}, obiettiviMinimi: {} });
+});
+
+test('il documento ha intestazione centrata e carattere senza grazie', () => {
+  const m = modello();
+  m.scuola.nome = 'Istituto Comprensivo di Prova';
+  const p = M.nuovoPiano(m, { docente: 'Rossi', disciplina: 'Musica', classe: '1', sezione: 'A', libro: 'Musica in classe' });
+  const html = D.renderPiano(p, m);
+  assert.match(html, /<h1 class="doc-titolo" align="center">/);
+  assert.doesNotMatch(html, /<header|<section|<article/, 'Word ignora gli elementi HTML5');
+  assert.match(html, /<th>Docente<\/th><td>Rossi<\/td><th>Disciplina<\/th><td>Musica<\/td>/);
+  assert.match(D.CSS_DOCUMENTO, /\.doc\{font-family:Calibri,[^}]*sans-serif/);
+  assert.doesNotMatch(D.CSS_DOCUMENTO, /Times New Roman|serif;[^}]*Georgia/);
+  assert.match(D.documentoWord([p], m), /@page WordSection1\{size:21cm 29\.7cm;margin:2cm/);
 });
 
 // Token di prova nel formato di Google (intestazione.contenuto.firma, in base64url).

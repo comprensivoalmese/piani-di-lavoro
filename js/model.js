@@ -61,10 +61,12 @@
   function normalizzaModello(m) {
     var base = defaults.modelloPredefinito();
     if (!isOggetto(m)) return base;
-    // I modelli precedenti alla versione 2 non avevano gli argomenti.
-    var migra = !(Number(m.schema) >= 2);
+    // Versione 2: banca degli argomenti; versione 3: banche degli obiettivi.
+    var versione = Number(m.schema) || 1;
+    var migra = versione < 2;
+    var migra3 = versione < 3;
     var out = {
-      schema: 2,
+      schema: 3,
       aggiornato: testo(m.aggiornato),
       bloccato: !!m.bloccato,
       scuola: Object.assign({}, base.scuola, isOggetto(m.scuola) ? m.scuola : {}),
@@ -87,14 +89,36 @@
     dati.attiva = true;
     out.sezioni.unshift(dati);
 
-    if (migra && !out.sezioni.some(function (s) { return s.tipo === 'argomenti'; })) {
-      var sezArgomenti = clona(base.sezioni.find(function (s) { return s.tipo === 'argomenti'; }));
+    // Posizione dopo l'ultima sezione che soddisfa la condizione (o in fondo).
+    var dopoUltima = function (cond) {
+      for (var i = out.sezioni.length - 1; i >= 0; i--) if (cond(out.sezioni[i])) return i + 1;
+      return out.sezioni.length;
+    };
+    var eBanca = function (cat) { return function (s) { return s.tipo === 'argomenti' && catalogoSezione(s) === cat; }; };
+    var predefinita = function (cat) { return normalizzaSezione(clona(base.sezioni.find(eBanca(cat)))); };
+
+    // Dalla versione 2 c'è la banca degli argomenti.
+    if (migra && !out.sezioni.some(eBanca('argomenti'))) {
+      var sezArgomenti = predefinita('argomenti');
       if (!visti[sezArgomenti.id]) {
-        var iTraguardi = out.sezioni.findIndex(function (s) { return s.tipo === 'traguardi'; });
-        var iUda = out.sezioni.findIndex(function (s) { return s.tipo === 'uda'; });
-        var dove = iTraguardi >= 0 ? iTraguardi + 1 : (iUda >= 0 ? iUda : out.sezioni.length);
-        out.sezioni.splice(dove, 0, normalizzaSezione(sezArgomenti));
+        out.sezioni.splice(dopoUltima(function (s) { return s.tipo === 'traguardi' || eBanca('obiettivi')(s) || eBanca('obiettiviMinimi')(s); }), 0, sezArgomenti);
       }
+    }
+
+    // Dalla versione 3 anche obiettivi e obiettivi minimi si scelgono da una banca.
+    if (migra3) {
+      ['obiettivi', 'obiettiviMinimi'].forEach(function (cat) {
+        if (out.sezioni.some(eBanca(cat))) return;
+        var nuova = predefinita(cat);
+        var stessa = out.sezioni.find(function (s) { return s.id === nuova.id; });
+        if (stessa) {
+          // Una sezione di testo libero con lo stesso nome diventa la banca: il testo resta nelle note.
+          if (stessa.tipo === 'testo') { stessa.tipo = 'argomenti'; stessa.catalogo = cat; stessa.guida = nuova.guida; }
+          return;
+        }
+        var prima = cat === 'obiettivi' ? ['traguardi'] : ['traguardi', 'obiettivi'];
+        out.sezioni.splice(dopoUltima(function (s) { return s.tipo === 'traguardi' || prima.some(function (p) { return p !== 'traguardi' && eBanca(p)(s); }); }), 0, nuova);
+      });
     }
 
     var nomi = {};
@@ -108,14 +132,16 @@
         ore: d.ore === '' || d.ore == null ? '' : Number(d.ore) || '',
         nuclei: elencoStringhe(d.nuclei),
         traguardi: elencoStringhe(d.traguardi),
-        argomenti: normalizzaArgomenti(migra && !isOggetto(d.argomenti) ? defaults.argomentiPredefiniti(nome) : d.argomenti)
+        argomenti: normalizzaArgomenti(migra && !isOggetto(d.argomenti) ? defaults.catalogoPredefinito('argomenti', nome) : d.argomenti),
+        obiettivi: normalizzaArgomenti(migra3 && !isOggetto(d.obiettivi) ? defaults.catalogoPredefinito('obiettivi', nome) : d.obiettivi),
+        obiettiviMinimi: normalizzaArgomenti(migra3 && !isOggetto(d.obiettiviMinimi) ? defaults.catalogoPredefinito('obiettiviMinimi', nome) : d.obiettiviMinimi)
       });
     });
     return out;
   }
 
   function normalizzaSezione(s) {
-    return {
+    var out = {
       id: testo(s.id),
       tipo: s.tipo,
       titolo: testo(s.titolo) || 'Sezione',
@@ -129,11 +155,21 @@
       }) : [],
       testo: testo(s.testo)
     };
+    if (out.tipo === 'argomenti') out.catalogo = catalogoSezione(s);
+    return out;
   }
 
-  /* ---------- Argomenti per disciplina e classe ---------- */
+  /* ---------- Banche per disciplina e classe ---------- */
 
+  // Ogni disciplina ha tre banche, una per catalogo: argomenti, obiettivi
+  // specifici e obiettivi minimi. Le sezioni di tipo "argomenti" indicano
+  // quale banca usano (sezione.catalogo).
   var CLASSI = ['1', '2', '3'];
+  var CATALOGHI = defaults.CATALOGHI;
+
+  function catalogoSezione(sezione) {
+    return sezione && CATALOGHI.indexOf(sezione.catalogo) >= 0 ? sezione.catalogo : 'argomenti';
+  }
 
   // { "1": [{ titolo, voci }], "2": [...], "3": [...] }
   function normalizzaArgomenti(a) {
@@ -154,49 +190,62 @@
     }).join('\n');
   }
 
-  // Banca personale del docente: argomenti aggiunti a mano, con la stessa
-  // forma degli argomenti del modello ({ "Musica": { "1": [{ titolo, voci }] } }).
+  // Banca personale del docente: voci aggiunte a mano, per catalogo, con la
+  // stessa forma delle banche del modello
+  // ({ argomenti: { "Musica": { "1": [{ titolo, voci }] } }, obiettivi: {...}, obiettiviMinimi: {...} }).
   // È salvata nel browser del docente e riproposta in tutti i suoi piani.
   function normalizzaBanca(b) {
     var out = {};
+    CATALOGHI.forEach(function (cat) { out[cat] = {}; });
     if (!isOggetto(b)) return out;
-    Object.keys(b).forEach(function (nome) {
-      var n = testo(nome).trim();
-      if (!n) return;
-      var a = normalizzaArgomenti(b[nome]);
-      if (CLASSI.some(function (c) { return a[c].length; })) out[n] = a;
+    // Le banche della prima versione contenevano solo argomenti.
+    var perCatalogo = Object.keys(b).some(function (k) { return CATALOGHI.indexOf(k) >= 0; });
+    var fonte = perCatalogo ? b : { argomenti: b };
+    CATALOGHI.forEach(function (cat) {
+      if (!isOggetto(fonte[cat])) return;
+      Object.keys(fonte[cat]).forEach(function (nome) {
+        var n = testo(nome).trim();
+        if (!n) return;
+        var a = normalizzaArgomenti(fonte[cat][nome]);
+        if (CLASSI.some(function (c) { return a[c].length; })) out[cat][n] = a;
+      });
     });
     return out;
   }
 
   function stessoTitolo(a, b) { return testo(a).trim().toLowerCase() === testo(b).trim().toLowerCase(); }
 
-  function aggiungiABanca(banca, disciplina, classe, titolo, voce) {
+  function aggiungiABanca(banca, catalogo, disciplina, classe, titolo, voce) {
     var nome = testo(disciplina).trim();
     var x = testo(voce).trim();
-    if (!nome || !x || CLASSI.indexOf(testo(classe)) < 0) return false;
-    var a = banca[nome] || (banca[nome] = normalizzaArgomenti(null));
+    if (CATALOGHI.indexOf(catalogo) < 0 || !nome || !x || CLASSI.indexOf(testo(classe)) < 0) return false;
+    var parte = banca[catalogo] || (banca[catalogo] = {});
+    var a = parte[nome] || (parte[nome] = normalizzaArgomenti(null));
     var g = a[classe].find(function (gr) { return stessoTitolo(gr.titolo, titolo); });
     if (!g) { g = { titolo: testo(titolo).trim(), voci: [] }; a[classe].push(g); }
     if (g.voci.indexOf(x) < 0) g.voci.push(x);
     return true;
   }
 
-  function rimuoviDaBanca(banca, disciplina, classe, voce) {
-    var a = banca[disciplina];
+  function rimuoviDaBanca(banca, catalogo, disciplina, classe, voce) {
+    var parte = banca[catalogo];
+    var a = parte && parte[disciplina];
     if (!a || !a[classe]) return;
     a[classe] = a[classe].map(function (g) {
       return { titolo: g.titolo, voci: g.voci.filter(function (x) { return x !== voce; }) };
     }).filter(function (g) { return g.voci.length; });
-    if (!CLASSI.some(function (c) { return a[c].length; })) delete banca[disciplina];
+    if (!CLASSI.some(function (c) { return a[c].length; })) delete parte[disciplina];
   }
 
   // Aggiunge alla banca "a" le voci della banca "b" (importazioni e backup).
   function unisciBanca(a, b) {
-    Object.keys(b || {}).forEach(function (nome) {
-      CLASSI.forEach(function (c) {
-        ((b[nome] || {})[c] || []).forEach(function (g) {
-          g.voci.forEach(function (x) { aggiungiABanca(a, nome, c, g.titolo, x); });
+    var nb = normalizzaBanca(b);
+    CATALOGHI.forEach(function (cat) {
+      Object.keys(nb[cat]).forEach(function (nome) {
+        CLASSI.forEach(function (c) {
+          nb[cat][nome][c].forEach(function (g) {
+            g.voci.forEach(function (x) { aggiungiABanca(a, cat, nome, c, g.titolo, x); });
+          });
         });
       });
     });
@@ -206,18 +255,25 @@
   // Solo la parte della banca che riguarda le discipline dei piani indicati.
   function bancaPerPiani(banca, piani) {
     var out = {};
-    piani.forEach(function (p) { if (banca && banca[p.disciplina]) out[p.disciplina] = clona(banca[p.disciplina]); });
+    CATALOGHI.forEach(function (cat) {
+      var parte = banca && banca[cat];
+      piani.forEach(function (p) {
+        if (parte && parte[p.disciplina]) (out[cat] = out[cat] || {})[p.disciplina] = clona(parte[p.disciplina]);
+      });
+    });
     return out;
   }
 
-  // Gruppi di argomenti della banca per il piano: prima quelli della sua
-  // classe, poi quelli delle altre classi (propria = false); senza classe,
-  // tutti. Gli argomenti della banca personale si uniscono ai gruppi con lo
-  // stesso titolo e sono elencati anche in "personali".
-  function gruppiArgomenti(modello, piano, banca) {
+  // Gruppi di una banca per il piano: prima quelli della sua classe, poi
+  // quelli delle altre classi (propria = false); senza classe, tutti. Le voci
+  // della banca personale si uniscono ai gruppi con lo stesso titolo e sono
+  // elencate anche in "personali".
+  function gruppiArgomenti(modello, piano, banca, catalogo) {
+    var cat = CATALOGHI.indexOf(catalogo) >= 0 ? catalogo : 'argomenti';
     var d = trovaDisciplina(modello, piano.disciplina);
-    var mia = banca && banca[testo(piano.disciplina).trim()];
-    if (!(d && d.argomenti) && !mia) return [];
+    var delModello = d && d[cat];
+    var mia = banca && banca[cat] && banca[cat][testo(piano.disciplina).trim()];
+    if (!delModello && !mia) return [];
     var classe = testo(piano.classe);
     var ordine = CLASSI.indexOf(classe) >= 0
       ? [classe].concat(CLASSI.filter(function (c) { return c !== classe; }))
@@ -227,7 +283,7 @@
       var propria = !classe || c === classe;
       var personali = (mia && mia[c]) || [];
       var uniti = {};
-      ((d && d.argomenti && d.argomenti[c]) || []).forEach(function (g) {
+      ((delModello && delModello[c]) || []).forEach(function (g) {
         var extra = [];
         personali.forEach(function (m, i) {
           if (!stessoTitolo(m.titolo, g.titolo)) return;
@@ -243,9 +299,9 @@
     return out;
   }
 
-  // Argomenti scelti, raggruppati come nella banca (gruppi con lo stesso
-  // titolo vengono uniti). Le voci non più presenti e quelle scritte a mano
-  // nel piano finiscono in "altri".
+  // Voci scelte, raggruppate come nella banca (gruppi con lo stesso titolo
+  // vengono uniti). Le voci non più presenti e quelle scritte a mano nel
+  // piano finiscono in "altri".
   function argomentiScelti(piano, sezione, modello, banca) {
     var v = valoreSezione(piano, sezione);
     var scelti = {};
@@ -253,7 +309,7 @@
     var stampati = {};
     var gruppi = [];
     var perTitolo = {};
-    gruppiArgomenti(modello, piano, banca).forEach(function (g) {
+    gruppiArgomenti(modello, piano, banca, catalogoSezione(sezione)).forEach(function (g) {
       var voci = g.voci.filter(function (x) { return scelti[x] && !stampati[x]; });
       if (!voci.length) return;
       voci.forEach(function (x) { stampati[x] = true; });
@@ -516,6 +572,8 @@
     CAMPI_SITUAZIONE: CAMPI_SITUAZIONE,
     MESI: MESI,
     CLASSI: CLASSI,
+    CATALOGHI: CATALOGHI,
+    catalogoSezione: catalogoSezione,
     clona: clona,
     uid: uid,
     righe: righe,

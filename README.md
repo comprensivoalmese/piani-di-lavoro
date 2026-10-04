@@ -8,6 +8,8 @@ della scuola secondaria di primo grado.
 - **Compilazione a colpi di spunta**: competenze chiave europee, traguardi delle Indicazioni
   nazionali per ogni disciplina, metodologie, strumenti, verifiche, criteri di valutazione,
   recupero e potenziamento, inclusione, educazione civica, rapporti con le famiglie.
+- **Obiettivi specifici e obiettivi minimi**: si scelgono da una banca per disciplina e classe, divisa per
+  nucleo, come gli argomenti; il docente può aggiungerne di propri.
 - **Argomenti trattati**: per ogni disciplina e per ogni classe (prima, seconda, terza) un elenco di
   argomenti raggruppati (es. per Musica: Acustica, Strumenti, Lettura…) da spuntare; si possono
   mostrare anche quelli delle altre classi. Gli argomenti svolti in più si aggiungono alla **banca
@@ -66,6 +68,8 @@ browser. È importante fare periodicamente *Backup di tutti i piani* dall'elenco
 | `index.html`, `css/style.css` | Pagina e stili (anche di stampa) |
 | `js/defaults.js` | Modello predefinito: sezioni, voci, discipline, traguardi e nuclei tematici |
 | `js/argomenti.js` | Argomenti proposti per disciplina e classe |
+| `js/obiettivi.js` | Obiettivi specifici e obiettivi minimi proposti per disciplina e classe |
+| `js/config.js` | Accesso con Google e modelli delle scuole |
 | `js/model.js` | Logica dei dati (piani, completamento, import/export), senza DOM |
 | `js/documento.js` | Generazione del documento per anteprima, stampa e Word |
 | `js/store.js` | Salvataggio nel browser e caricamento del modello d'istituto |
