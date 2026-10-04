@@ -133,7 +133,7 @@
     return '<header class="doc-testata">' +
       (sc.nome ? '<div class="doc-scuola">' + esc(sc.nome) + '</div>' : '') +
       (sc.sottotitolo ? '<div class="doc-sottotitolo">' + esc(sc.sottotitolo) + '</div>' : '') +
-      '<h1 class="doc-titolo">Piano di lavoro annuale</h1>' +
+      '<h1 class="doc-titolo">' + esc(sc.titoloDocumento || 'Piano di lavoro annuale') + '</h1>' +
       '<div class="doc-anno">Anno scolastico ' + esc(piano.anno || sc.annoScolastico) + '</div>' +
       '</header><table class="doc-tab doc-dati">' + righeDati + '</table>';
   }

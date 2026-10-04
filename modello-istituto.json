@@ -1,0 +1,427 @@
+{
+  "formato": "modello-piano-di-lavoro",
+  "versione": 1,
+  "modello": {
+    "schema": 2,
+    "aggiornato": "2026-10-04T16:27:37.000Z",
+    "bloccato": true,
+    "scuola": {
+      "nome": "Istituto Comprensivo di Almese",
+      "sottotitolo": "Scuola secondaria di primo grado «Riva Rocci»",
+      "citta": "Almese",
+      "annoScolastico": "2026/2027",
+      "titoloDocumento": "Programmazione educativo-didattica"
+    },
+    "periodi": [
+      "I quadrimestre",
+      "II quadrimestre"
+    ],
+    "livelli": [
+      "Avanzato (9-10)",
+      "Intermedio (7-8)",
+      "Base (6)",
+      "In via di prima acquisizione (4-5)"
+    ],
+    "sezioni": [
+      {
+        "id": "dati",
+        "tipo": "dati",
+        "titolo": "Dati generali",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Docente, disciplina, classe e sezione compaiono nell'intestazione del documento.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "situazione",
+        "tipo": "situazione",
+        "titolo": "Caratteristiche della classe e situazione di partenza",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Composizione della classe, fasce di livello rilevate a inizio anno e strumenti usati per individuare la situazione di partenza.",
+        "opzioni": [
+          "Informazioni fornite dalla scuola primaria",
+          "Test d'ingresso predisposto collegialmente",
+          "Test d'ingresso predisposto individualmente",
+          "Osservazioni sistematiche",
+          "Colloqui con le famiglie",
+          "Documentazione agli atti (PEI, PDP, certificazioni)"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "profilo",
+        "tipo": "checklist",
+        "titolo": "La classe è",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": true,
+        "guida": "Comportamento e atteggiamento prevalenti della classe.",
+        "opzioni": [
+          "Indisciplinata",
+          "Problematica",
+          "Vivace",
+          "Collaborativa",
+          "Disponibile",
+          "Tranquilla",
+          "Passiva"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "ritmo",
+        "tipo": "checklist",
+        "titolo": "Ritmo di apprendimento",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": true,
+        "guida": "",
+        "opzioni": [
+          "Molto soddisfacente",
+          "Soddisfacente",
+          "Positivo",
+          "Complessivamente positivo",
+          "Mediocre",
+          "Non soddisfacente"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "competenze",
+        "tipo": "checklist",
+        "titolo": "Competenze chiave europee",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Raccomandazione del Consiglio dell'Unione europea del 22 maggio 2018.",
+        "opzioni": [
+          "Competenza alfabetica funzionale",
+          "Competenza multilinguistica",
+          "Competenza matematica e competenza in scienze, tecnologie e ingegneria",
+          "Competenza digitale",
+          "Competenza personale, sociale e capacità di imparare a imparare",
+          "Competenza in materia di cittadinanza",
+          "Competenza imprenditoriale",
+          "Competenza in materia di consapevolezza ed espressione culturali"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "traguardi",
+        "tipo": "traguardi",
+        "titolo": "Traguardi per lo sviluppo delle competenze al termine della scuola secondaria di primo grado",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "In base agli obiettivi delle Indicazioni per il curricolo e agli obiettivi formativi del P.T.O.F. dell'istituto. L'elenco cambia in base alla disciplina scelta.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "obiettivi",
+        "tipo": "testo",
+        "titolo": "Obiettivi specifici della disciplina (conoscenze e abilità)",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": true,
+        "guida": "Per ciascun nucleo della disciplina, le conoscenze e le abilità previste per la classe.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "obiettiviMinimi",
+        "tipo": "testo",
+        "titolo": "Obiettivi minimi",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": true,
+        "guida": "Gli obiettivi essenziali che tutti gli alunni devono raggiungere.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "metodologie",
+        "tipo": "checklist",
+        "titolo": "Metodi",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [
+          "Lezione partecipata",
+          "Esercitazioni individuali",
+          "Cooperative learning",
+          "Peer tutoring",
+          "Attività di laboratorio",
+          "Lezione frontale",
+          "Lavori di gruppo",
+          "Flipped classroom",
+          "Problem solving",
+          "Brainstorming",
+          "Role playing",
+          "Debate",
+          "Circle time",
+          "Apprendimento per scoperta",
+          "Compiti di realtà",
+          "Didattica digitale integrata",
+          "CLIL"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "strumenti",
+        "tipo": "checklist",
+        "titolo": "Strumenti",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [
+          "Libri di testo",
+          "Filmati didattici e di divulgazione",
+          "Testi, schede in alternativa o appoggio ai libri adottati",
+          "Programmi informatici",
+          "Attrezzature di laboratorio",
+          "LIM",
+          "Uscite sul territorio",
+          "Documenti autentici",
+          "Mappe concettuali",
+          "Computer e tablet",
+          "Piattaforme e ambienti digitali di apprendimento",
+          "Dizionari",
+          "Strumenti musicali",
+          "Materiale da disegno",
+          "Palestra e attrezzature sportive"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "attivita",
+        "tipo": "checklist",
+        "titolo": "Metodologie: attività in classe e a casa",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": true,
+        "guida": "",
+        "opzioni": [
+          "In classe: lezione partecipata con l'utilizzo della LIM",
+          "In classe: guida alla comprensione del manuale",
+          "In classe: discussione e ricerca su temi noti",
+          "In classe: esercitazioni pratiche / attività laboratoriale",
+          "In classe: produzione di mappe, schemi, griglie, appunti",
+          "In classe: assegnazione dei compiti",
+          "In classe: correzione del lavoro assegnato",
+          "In classe: verifica in itinere dell'apprendimento",
+          "A casa: studio individuale del manuale",
+          "A casa: esercitazioni pratiche"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "recupero",
+        "tipo": "checklist",
+        "titolo": "Attività di recupero e potenziamento",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [
+          "Riproposizione periodica, per linee generali, degli argomenti già svolti",
+          "Svolgimento di attività di recupero in classe e a casa",
+          "Correzione del lavoro assegnato",
+          "Eventuale verifica di recupero",
+          "Pausa didattica",
+          "Attività per gruppi di livello",
+          "Peer tutoring",
+          "Attività di approfondimento",
+          "Partecipazione a gare e concorsi",
+          "Progetti di potenziamento"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "verifiche",
+        "tipo": "checklist",
+        "titolo": "Verifiche",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Il processo di apprendimento degli alunni sarà monitorato mediante osservazione, verifiche formative e verifiche sommative.",
+        "opzioni": [
+          "Osservazione: comportamento dell'alunno durante il lavoro in classe",
+          "Osservazione: interesse alle lezioni",
+          "Osservazione: interventi opportuni",
+          "Osservazione: esposizione corretta",
+          "Osservazione: conoscenza dei termini",
+          "Verifica formativa: controllo del lavoro svolto a casa",
+          "Verifica formativa: indagine in itinere, ripetizione dell'argomento trattato a fine lezione o all'inizio della successiva",
+          "Verifica formativa: lezione dialogata",
+          "Verifica formativa: colloquio",
+          "Verifica formativa: esercitazioni pratiche",
+          "Verifica sommativa: domande orali",
+          "Verifica sommativa: prove semistrutturate",
+          "Verifica sommativa: prove strutturate",
+          "Verifica sommativa: prove pratiche",
+          "Verifica sommativa: lavori in forma digitale"
+        ],
+        "campi": [
+          {
+            "id": "scritte",
+            "etichetta": "N. minimo di verifiche scritte per periodo",
+            "tipo": "numero"
+          },
+          {
+            "id": "orali",
+            "etichetta": "N. minimo di verifiche orali per periodo",
+            "tipo": "numero"
+          },
+          {
+            "id": "pratiche",
+            "etichetta": "N. minimo di verifiche pratiche per periodo",
+            "tipo": "numero"
+          }
+        ],
+        "testo": ""
+      },
+      {
+        "id": "valutazione",
+        "tipo": "checklist",
+        "titolo": "Criteri di valutazione",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [
+          "Verifiche orali: capacità espositiva, correttezza delle informazioni, completezza dei contenuti, capacità di generalizzare e di applicare le conoscenze in contesti differenti",
+          "Verifiche scritte a domande aperte: completezza dei contenuti, pertinenza ai quesiti, struttura delle risposte, capacità espositiva, correttezza ortografica e morfosintattica",
+          "Verifiche chiuse o strutturate: quesiti di varie tipologie",
+          "Verifiche pratiche: correttezza e autonomia nell'esecuzione, individuale e di gruppo",
+          "Livello di partenza e progressi compiuti",
+          "Impegno, diligenza e partecipazione"
+        ],
+        "campi": [],
+        "testo": "Le valutazioni relative alle prove di qualsiasi tipo saranno espresse con una scala numerica in decimi. La valutazione sarà di volta in volta il più possibile formativa, per incoraggiare l'allievo e favorire il superamento delle proprie difficoltà.\n\nLa media aritmetica non sarà l'unico criterio per la determinazione dei risultati quadrimestrali: si terrà conto del livello di partenza, dell'impegno, della diligenza e del quadro individuale delle capacità."
+      },
+      {
+        "id": "argomenti",
+        "tipo": "argomenti",
+        "titolo": "Contenuti",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Banca argomenti della disciplina: spunta quelli che tratterai durante l'anno. Se svolgi argomenti diversi, aggiungili in fondo alla sezione: resteranno nella tua banca personale.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "inclusione",
+        "tipo": "checklist",
+        "titolo": "Casi particolari e inclusione (BES, DSA, disabilità)",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Non indicare i nomi degli alunni: fare riferimento a PEI e PDP agli atti.",
+        "opzioni": [
+          "Applicazione di quanto previsto nel PEI (L. 104/1992)",
+          "Applicazione di quanto previsto nel PDP (L. 170/2010 e BES)",
+          "Convocazione delle famiglie",
+          "Strumenti compensativi",
+          "Misure dispensative",
+          "Tempi più lunghi per lo svolgimento delle prove",
+          "Verifiche semplificate o equipollenti",
+          "Materiali semplificati, mappe e schemi",
+          "Tutoraggio tra pari",
+          "Collaborazione con il docente di sostegno",
+          "Attività di alfabetizzazione in italiano L2"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "edcivica",
+        "tipo": "checklist",
+        "titolo": "Educazione civica",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Contributo della disciplina al curricolo di educazione civica (L. 92/2019, Linee guida 2024).",
+        "opzioni": [
+          "Costituzione",
+          "Sviluppo economico e sostenibilità",
+          "Cittadinanza digitale"
+        ],
+        "campi": [
+          {
+            "id": "ore",
+            "etichetta": "Ore annuali svolte nella disciplina",
+            "tipo": "numero"
+          },
+          {
+            "id": "periodo",
+            "etichetta": "Periodo di svolgimento",
+            "tipo": "testo"
+          }
+        ],
+        "testo": ""
+      },
+      {
+        "id": "famiglie",
+        "tipo": "checklist",
+        "titolo": "Rapporti con le famiglie",
+        "attiva": true,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [
+          "Colloqui individuali in orario di ricevimento",
+          "Colloqui generali",
+          "Registro elettronico",
+          "Comunicazioni scritte",
+          "Incontri su richiesta"
+        ],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "uda",
+        "tipo": "uda",
+        "titolo": "Unità di apprendimento: obiettivi, contenuti e tempi",
+        "attiva": false,
+        "facoltativa": false,
+        "personalizzata": false,
+        "guida": "Una riga per ogni unità di apprendimento. I nuclei tematici dipendono dalla disciplina.",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      },
+      {
+        "id": "note",
+        "tipo": "testo",
+        "titolo": "Osservazioni",
+        "attiva": true,
+        "facoltativa": true,
+        "personalizzata": false,
+        "guida": "",
+        "opzioni": [],
+        "campi": [],
+        "testo": ""
+      }
+    ]
+  }
+}

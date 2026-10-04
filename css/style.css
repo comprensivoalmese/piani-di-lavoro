@@ -229,6 +229,11 @@ fieldset:disabled input, fieldset:disabled textarea, fieldset:disabled select { 
 .riga-aggiungi .campo.nascosto { display: none; }
 .riga-aggiungi > .btn { margin-bottom: .75rem; }
 
+.avviso-modello { padding: .6rem .9rem; border-radius: 8px; margin: 0 0 1rem; font-size: .9rem; line-height: 1.45; }
+.avviso-modello.ok { background: var(--verde-chiaro); }
+.avviso-modello.attenzione { background: var(--giallo-chiaro); border: 1px solid #e3c35a; }
+.avviso-modello .nota { display: block; margin-top: .25rem; }
+
 .avvisi-form p { margin: .2rem 0; padding: .4rem .7rem; background: var(--giallo-chiaro); border-radius: 6px; font-size: .88rem; }
 
 .uda-lista { display: flex; flex-direction: column; gap: .8rem; margin-bottom: .8rem; }

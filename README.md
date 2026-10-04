@@ -36,6 +36,10 @@ Se l'app è pubblicata online, basta salvare `modello-istituto.json` accanto a `
 viene caricato automaticamente al primo avvio e, quando viene aggiornato, ai docenti compare
 un avviso per applicare la nuova versione.
 
+Il file `modello-istituto.json` di questo repository è il modello dell'Istituto Comprensivo di Almese,
+ricavato dal modello cartaceo dei piani di lavoro: i docenti che usano il link della scuola lo ricevono
+in automatico, in sola lettura. Le discipline non sono nel file: si usano quelle predefinite dell'app.
+
 ## Dati
 
 I piani sono salvati nel `localStorage` del browser, quindi solo su quel computer e in quel

@@ -220,12 +220,29 @@
       azioni.length ? h('div', { class: 'azioni' }, azioni) : null);
   }
 
+  // Ricorda al docente che i piani si compilano con il modello della scuola.
+  function avvisoModello() {
+    const m = stato.modello;
+    if (m.bloccato) {
+      const data = m.aggiornato ? new Date(m.aggiornato) : null;
+      return h('div', { class: 'avviso-modello ok' },
+        h('strong', null, 'Modello della scuola in uso' + (m.scuola.nome ? ': ' + m.scuola.nome : '') + '. '),
+        'Tutti i docenti compilano i piani con questo modello, senza modificarlo.',
+        data && !isNaN(data) ? ` Versione del ${data.toLocaleDateString('it-IT')}.` : '');
+    }
+    return h('div', { class: 'avviso-modello attenzione', role: 'note' },
+      h('strong', null, 'Attenzione: non stai usando il modello della scuola. '),
+      'I piani di lavoro vanno compilati con il modello d\'istituto preparato dal referente: apri l\'app dal link della scuola, che lo carica in automatico, oppure importa con «Importa file» il modello ricevuto dal referente. ',
+      h('span', { class: 'nota' }, 'Se sei il referente e stai preparando il modello, puoi ignorare questo avviso.'));
+  }
+
   function vistaElenco() {
     const n = stato.piani.length;
     app.append(intestazioneVista('I miei piani di lavoro',
       n ? `${n} ${n === 1 ? 'piano salvato' : 'piani salvati'} in questo browser` : null,
       n ? bottone('Backup di tutti i piani', () => esportaPiani(stato.piani, 'Backup piani di lavoro.json')) : null,
-      bottone('+ Nuovo piano', () => apriDialogoPiano(), 'btn primario')));
+      bottone('+ Nuovo piano', () => apriDialogoPiano(), 'btn primario')),
+      avvisoModello());
 
     if (!n) {
       app.append(benvenuto());
@@ -311,7 +328,7 @@
       h('p', null, 'Questa app aiuta i docenti della scuola secondaria di primo grado a compilare il piano di lavoro annuale in pochi minuti, con un modello uguale per tutta la scuola.'),
       h('ol', { class: 'passi' },
         h('li', null, h('strong', null, 'Il referente prepara il modello d\'istituto'), ': intestazione della scuola, sezioni del piano, voci degli elenchi, discipline. Poi lo esporta e lo invia ai colleghi.'),
-        h('li', null, h('strong', null, 'Ogni docente importa il modello'), ' con il pulsante «Importa file» e crea i propri piani: gran parte delle sezioni si compila con un clic.'),
+        h('li', null, h('strong', null, 'Ogni docente usa il modello della scuola'), ': aprendo l\'app dal link della scuola lo riceve in automatico (oppure lo importa con «Importa file»). Poi crea i propri piani: gran parte delle sezioni si compila con un clic.'),
         h('li', null, h('strong', null, 'Il piano si scarica in Word o si stampa in PDF'), ', sempre con la stessa impaginazione.')),
       h('div', { class: 'azioni' },
         bottone('+ Crea il primo piano', () => apriDialogoPiano(), 'btn primario'),
@@ -469,7 +486,7 @@
       h('aside', { class: 'indice' },
         h('div', { id: 'avanzamento-editor' }),
         h('nav', { 'aria-label': 'Sezioni del piano' }, h('ol', null, voci))),
-      h('div', { class: 'editor-corpo' }, barra, schede)));
+      h('div', { class: 'editor-corpo' }, barra, stato.modello.bloccato ? null : avvisoModello(), schede)));
     aggiornaStatoEditor(piano);
   }
 
@@ -883,7 +900,10 @@
     const r = M.leggiPacchetto(contenuto);
     if (r.errore) { toast(r.errore, 'errore'); return; }
     if (r.tipo === 'modello') {
-      if (!confirm('Il file contiene un modello d\'istituto. Sostituire il modello attuale? I piani già compilati non vengono modificati.')) return;
+      const domanda = stato.modello.bloccato
+        ? 'Stai già usando il modello della scuola. Sostituirlo con quello contenuto nel file? Fallo solo se è il modello ufficiale ricevuto dal referente. I piani già compilati non vengono modificati.'
+        : 'Il file contiene un modello d\'istituto. Sostituire il modello attuale? I piani già compilati non vengono modificati.';
+      if (!confirm(domanda)) return;
       stato.modello = r.modello;
       salvaModelloOra();
       toast('Modello d\'istituto importato.');
@@ -907,9 +927,9 @@
 
     if (m.bloccato) {
       app.append(h('div', { class: 'banner-info' },
-        h('p', null, h('strong', null, 'Modello distribuito dall\'istituto. '), 'È in sola lettura per garantire che tutti i docenti usino la stessa struttura.'),
-        bottone('Modifica comunque', () => {
-          if (!confirm('Modificando il modello i tuoi piani potrebbero non essere più uniformi a quelli dei colleghi. Continuare?')) return;
+        h('p', null, h('strong', null, 'Modello della scuola. '), 'È in sola lettura: tutti i docenti devono usarlo così com\'è, perché i piani della scuola abbiano la stessa struttura. Solo il referente può modificarlo.'),
+        bottone('Sono il referente: modifica', () => {
+          if (!confirm('Il modello della scuola va modificato solo dal referente. Se lo modifichi, i tuoi piani non saranno più uniformi a quelli dei colleghi e potresti non ricevere gli aggiornamenti della scuola. Continuare?')) return;
           m.bloccato = false;
           salvaModelloOra();
           render();
@@ -934,7 +954,8 @@
         t('nome', 'Nome della scuola', { placeholder: 'es. Istituto Comprensivo «G. Rodari»' }),
         t('sottotitolo', 'Sottotitolo', { placeholder: 'es. Scuola secondaria di primo grado' }),
         t('citta', 'Città (per luogo e data)'),
-        t('annoScolastico', 'Anno scolastico proposto per i nuovi piani')),
+        t('annoScolastico', 'Anno scolastico proposto per i nuovi piani'),
+        t('titoloDocumento', 'Titolo del documento', { placeholder: 'es. Piano di lavoro annuale' })),
       h('div', { class: 'griglia-2' },
         elenco('periodi', 'Periodi didattici (uno per riga)'),
         elenco('livelli', 'Fasce di livello (una per riga)')));
@@ -1106,7 +1127,7 @@
         }, 'btn primario'),
         bottone('Importa un modello', importaFile),
         bottone('Ripristina il modello predefinito', () => {
-          if (!confirm('Ripristinare sezioni, voci e discipline predefinite? I dati della scuola vengono mantenuti.')) return;
+          if (!confirm('Ripristinare sezioni, voci e discipline predefinite? I dati della scuola vengono mantenuti. Se sei un docente non farlo: i piani vanno compilati con il modello della scuola.')) return;
           const nuovo = M.normalizzaModello(null);
           nuovo.scuola = m.scuola;
           nuovo.aggiornato = new Date().toISOString();
@@ -1131,7 +1152,7 @@
           h('li', null, 'Premi «Esporta il modello» e distribuisci il file ai docenti.'))),
       blocco('Per i docenti',
         h('ol', null,
-          h('li', null, 'Premi «Importa file» e scegli il modello ricevuto dalla scuola (una sola volta).'),
+          h('li', null, h('strong', null, 'Usa sempre il modello della scuola. '), 'Aprendo l\'app dal link della scuola lo ricevi in automatico; in alternativa premi «Importa file» e scegli il modello ricevuto dal referente. Non modificarlo e non sostituirlo: così tutti i piani della scuola hanno la stessa struttura. Quando compare l\'avviso di aggiornamento, premi «Aggiorna».'),
           h('li', null, 'Premi «+ Nuovo piano», indica disciplina, classe e sezione. Scrivendo «A, B, C» crei tre piani insieme.'),
           h('li', null, 'Compila le sezioni: quasi tutto si fa spuntando le voci. L\'indice a sinistra mostra cosa manca.'),
           h('li', null, 'Premi «Anteprima e stampa» per il PDF, oppure «Scarica Word» per il file modificabile.'))),
@@ -1163,7 +1184,7 @@
   function mostraAggiornamentoModello(remoto) {
     const banner = document.getElementById('banner');
     banner.replaceChildren(h('div', { class: 'banner-info' },
-      h('p', null, h('strong', null, 'È disponibile un modello d\'istituto aggiornato. '), 'Applicalo per allinearti ai colleghi: i piani già compilati non vengono modificati.'),
+      h('p', null, h('strong', null, 'È disponibile un aggiornamento del modello della scuola. '), 'Applicalo subito: i piani vanno compilati con il modello in vigore. I piani già compilati non vengono modificati.'),
       h('div', { class: 'azioni' },
         bottone('Aggiorna', () => {
           stato.modello = remoto;

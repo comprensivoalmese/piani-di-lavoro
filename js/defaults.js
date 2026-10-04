@@ -513,7 +513,8 @@
         nome: '',
         sottotitolo: 'Scuola secondaria di primo grado',
         citta: '',
-        annoScolastico: annoScolasticoCorrente()
+        annoScolastico: annoScolasticoCorrente(),
+        titoloDocumento: 'Piano di lavoro annuale'
       },
       periodi: ['I quadrimestre', 'II quadrimestre'],
       livelli: ['Avanzato', 'Intermedio', 'Base', 'Iniziale'],
