@@ -36,9 +36,23 @@ Se l'app è pubblicata online, basta salvare `modello-istituto.json` accanto a `
 viene caricato automaticamente al primo avvio e, quando viene aggiornato, ai docenti compare
 un avviso per applicare la nuova versione.
 
-Il file `modello-istituto.json` di questo repository è il modello dell'Istituto Comprensivo di Almese,
-ricavato dal modello cartaceo dei piani di lavoro: i docenti che usano il link della scuola lo ricevono
-in automatico, in sola lettura. Le discipline non sono nel file: si usano quelle predefinite dell'app.
+## Accesso con Google e modelli delle scuole
+
+In `js/config.js` si indicano l'ID client OAuth di Google e, per ogni scuola, il dominio Google Workspace
+degli account dei docenti, il file del modello (cartella `scuole/`) e le e-mail dei referenti.
+
+- Chi accede con un account della scuola riceve in automatico il modello della scuola, in sola lettura,
+  e gli aggiornamenti successivi; se lo altera nel proprio browser, al successivo avvio torna quello ufficiale.
+- Solo i referenti indicati vedono i comandi per modificarlo, esportarlo o sostituirlo. Le modifiche
+  restano nel loro browser finché il file esportato non viene pubblicato in `scuole/`.
+- La scuola si riconosce dal dominio Workspace dell'account (`hd`), non dall'indirizzo e-mail.
+- Il controllo avviene nel browser: guida i docenti, ma non protegge dati riservati (il sito non ha server).
+- Per aggiungere una scuola: il suo referente esporta il modello, il file va in `scuole/` e si aggiunge
+  una voce in `js/config.js`.
+
+`scuole/ic-almese.json` è il modello dell'Istituto Comprensivo di Almese, ricavato dal modello cartaceo
+dei piani di lavoro. Le discipline non sono nel file: si usano quelle predefinite dell'app.
+Finché l'accesso con Google non è attivo, `modelloPubblico` lo fa caricare a tutti.
 
 ## Dati
 

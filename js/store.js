@@ -10,6 +10,7 @@
   var CHIAVE_PIANI = 'pdl.piani';
   var CHIAVE_PREFERENZE = 'pdl.preferenze';
   var CHIAVE_BANCA = 'pdl.banca';
+  var CHIAVE_UTENTE = 'pdl.utente';
 
   function leggi(chiave) {
     try {
@@ -66,11 +67,23 @@
     scrivi(CHIAVE_PREFERENZE, p);
   }
 
-  // Il modello d'istituto può essere pubblicato accanto a index.html.
+  // Utente che ha eseguito l'accesso con Google (null se nessuno).
+  function caricaUtente() {
+    var u = leggi(CHIAVE_UTENTE);
+    return u && typeof u.email === 'string' ? { email: u.email, nome: String(u.nome || ''), dominio: String(u.dominio || '') } : null;
+  }
+
+  function salvaUtente(u) {
+    if (u) return scrivi(CHIAVE_UTENTE, u);
+    try { root.localStorage.removeItem(CHIAVE_UTENTE); } catch (e) { /* niente da fare */ }
+    return true;
+  }
+
+  // Modello di una scuola pubblicato insieme all'app (es. scuole/ic-almese.json).
   // Quando l'app è aperta come file locale la richiesta fallisce: nessun problema.
-  function caricaModelloIstituto() {
-    if (!root.fetch || root.location.protocol === 'file:') return Promise.resolve(null);
-    return root.fetch('modello-istituto.json', { cache: 'no-store' })
+  function caricaModelloIstituto(percorso) {
+    if (!percorso || !root.fetch || root.location.protocol === 'file:') return Promise.resolve(null);
+    return root.fetch(percorso, { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (json) {
         if (!json) return null;
@@ -89,6 +102,8 @@
     salvaPiani: salvaPiani,
     preferenze: preferenze,
     salvaPreferenza: salvaPreferenza,
+    caricaUtente: caricaUtente,
+    salvaUtente: salvaUtente,
     caricaModelloIstituto: caricaModelloIstituto
   };
 })(window);

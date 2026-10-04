@@ -58,6 +58,9 @@ code { background: var(--blu-chiaro); padding: 0 .3em; border-radius: 4px; }
 }
 .nav-principale a:hover { background: var(--sfondo); color: var(--testo); }
 .nav-principale a.attivo { background: var(--blu-chiaro); color: var(--blu-scuro); }
+.accesso { display: flex; align-items: center; gap: .4rem; min-height: 32px; }
+.accesso .utente { font-size: .88rem; color: var(--testo-2); display: inline-flex; align-items: center; gap: .35rem; }
+.badge-referente { font-size: .72rem; font-weight: 600; padding: .1rem .45rem; border-radius: 99px; background: var(--blu-chiaro); color: var(--blu-scuro); }
 
 main { max-width: 1200px; margin: 0 auto; padding: 1.25rem; outline: none; }
 #banner .banner-info { max-width: 1200px; margin: 1rem auto 0; }

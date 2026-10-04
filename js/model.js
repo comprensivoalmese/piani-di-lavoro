@@ -430,6 +430,38 @@
     return out;
   }
 
+  /* ---------- Accesso con Google ---------- */
+
+  // Dati dell'utente dal token di accesso di Google (JWT). Il contenuto viene
+  // solo letto: senza un server la firma non può essere verificata.
+  function leggiTokenGoogle(token) {
+    try {
+      var parte = testo(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (parte.length % 4) parte += '=';
+      var bin = atob(parte);
+      var byte = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) byte[i] = bin.charCodeAt(i);
+      var dati = JSON.parse(new TextDecoder().decode(byte));
+      if (!dati.email || dati.email_verified === false) return null;
+      // "hd" è presente solo per gli account Google Workspace (di una scuola).
+      return { email: testo(dati.email).toLowerCase(), nome: testo(dati.name), dominio: testo(dati.hd).toLowerCase() };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // La scuola si riconosce dal dominio Workspace dell'account, non dall'indirizzo:
+  // un account Google personale può usare qualsiasi indirizzo e-mail.
+  function trovaScuola(scuole, utente) {
+    if (!utente || !utente.dominio) return null;
+    return (scuole || []).find(function (s) { return testo(s.dominio).toLowerCase() === utente.dominio; }) || null;
+  }
+
+  function eReferente(scuola, utente) {
+    if (!scuola || !utente) return false;
+    return (scuola.referenti || []).some(function (r) { return testo(r).trim().toLowerCase() === utente.email; });
+  }
+
   /* ---------- Import / export ---------- */
 
   function pacchettoModello(modello) {
@@ -512,6 +544,9 @@
     avanzamento: avanzamento,
     avvisiSituazione: avvisiSituazione,
     normalizzaPiano: normalizzaPiano,
+    leggiTokenGoogle: leggiTokenGoogle,
+    trovaScuola: trovaScuola,
+    eReferente: eReferente,
     pacchettoModello: pacchettoModello,
     pacchettoPiani: pacchettoPiani,
     leggiPacchetto: leggiPacchetto,

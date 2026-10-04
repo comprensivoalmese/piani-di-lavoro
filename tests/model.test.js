@@ -273,3 +273,28 @@ test('banca personale: esportazione con i piani e unione all\'importazione', () 
   assert.deepEqual(M.normalizzaBanca({ '': {}, Vuota: { 1: [] }, Arte: { 1: [{ titolo: 'X', voci: ['a', ''] }] } }),
     { Arte: { 1: [{ titolo: 'X', voci: ['a'] }], 2: [], 3: [] } });
 });
+
+// Token di prova nel formato di Google (intestazione.contenuto.firma, in base64url).
+const tokenDiProva = (dati) => {
+  const b64 = (o) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return b64({ alg: 'RS256' }) + '.' + b64(dati) + '.firma';
+};
+
+test('accesso con Google: lettura del token, scuola dal dominio Workspace e referenti', () => {
+  const u = M.leggiTokenGoogle(tokenDiProva({ email: 'Chiara.Leto@comprensivoalmese.it', email_verified: true, name: 'Chiara Letò', hd: 'comprensivoalmese.it' }));
+  assert.deepEqual(u, { email: 'chiara.leto@comprensivoalmese.it', nome: 'Chiara Letò', dominio: 'comprensivoalmese.it' });
+  assert.equal(M.leggiTokenGoogle('non-un-token'), null);
+  assert.equal(M.leggiTokenGoogle(tokenDiProva({ email: 'x@y.it', email_verified: false })), null);
+
+  const scuole = [{ dominio: 'ComprensivoAlmese.it', nome: 'IC Almese', referenti: ['Chiara.Leto@comprensivoalmese.it'] }];
+  assert.equal(M.trovaScuola(scuole, u).nome, 'IC Almese');
+  assert.equal(M.eReferente(M.trovaScuola(scuole, u), u), true);
+  const collega = { email: 'mario.rossi@comprensivoalmese.it', nome: 'Mario Rossi', dominio: 'comprensivoalmese.it' };
+  assert.equal(M.eReferente(scuole[0], collega), false);
+  // Un account personale con un indirizzo della scuola non ha il dominio Workspace.
+  const personale = M.leggiTokenGoogle(tokenDiProva({ email: 'finto@comprensivoalmese.it', email_verified: true }));
+  assert.equal(personale.dominio, '');
+  assert.equal(M.trovaScuola(scuole, personale), null);
+  assert.equal(M.trovaScuola(scuole, null), null);
+});

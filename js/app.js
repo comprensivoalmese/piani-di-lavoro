@@ -6,6 +6,7 @@
   'use strict';
 
   const { model: M, documento: D, store: S } = window.PDL;
+  const C = window.PDL.config || { googleClientId: '', modelloPubblico: '', scuole: [] };
   const app = document.getElementById('app');
 
   const stato = {
@@ -13,6 +14,8 @@
     modelloSalvato: false,
     piani: [],
     banca: {},
+    utente: null,
+    scuola: null,
     selezionati: new Set(),
     filtri: { testo: '', anno: '', classe: '' }
   };
@@ -232,7 +235,9 @@
     }
     return h('div', { class: 'avviso-modello attenzione', role: 'note' },
       h('strong', null, 'Attenzione: non stai usando il modello della scuola. '),
-      'I piani di lavoro vanno compilati con il modello d\'istituto preparato dal referente: apri l\'app dal link della scuola, che lo carica in automatico, oppure importa con «Importa file» il modello ricevuto dal referente. ',
+      accessoAttivo()
+        ? 'I piani di lavoro vanno compilati con il modello d\'istituto: premi «Accedi con Google» in alto e usa l\'account della scuola, il modello viene caricato in automatico. In alternativa importa con «Importa file» il modello ricevuto dal referente. '
+        : 'I piani di lavoro vanno compilati con il modello d\'istituto preparato dal referente: apri l\'app dal link della scuola, che lo carica in automatico, oppure importa con «Importa file» il modello ricevuto dal referente. ',
       h('span', { class: 'nota' }, 'Se sei il referente e stai preparando il modello, puoi ignorare questo avviso.'));
   }
 
@@ -328,7 +333,9 @@
       h('p', null, 'Questa app aiuta i docenti della scuola secondaria di primo grado a compilare il piano di lavoro annuale in pochi minuti, con un modello uguale per tutta la scuola.'),
       h('ol', { class: 'passi' },
         h('li', null, h('strong', null, 'Il referente prepara il modello d\'istituto'), ': intestazione della scuola, sezioni del piano, voci degli elenchi, discipline. Poi lo esporta e lo invia ai colleghi.'),
-        h('li', null, h('strong', null, 'Ogni docente usa il modello della scuola'), ': aprendo l\'app dal link della scuola lo riceve in automatico (oppure lo importa con «Importa file»). Poi crea i propri piani: gran parte delle sezioni si compila con un clic.'),
+        h('li', null, h('strong', null, 'Ogni docente usa il modello della scuola'), accessoAttivo()
+          ? ': accedendo con Google con l\'account della scuola lo riceve in automatico. Poi crea i propri piani: gran parte delle sezioni si compila con un clic.'
+          : ': aprendo l\'app dal link della scuola lo riceve in automatico (oppure lo importa con «Importa file»). Poi crea i propri piani: gran parte delle sezioni si compila con un clic.'),
         h('li', null, h('strong', null, 'Il piano si scarica in Word o si stampa in PDF'), ', sempre con la stessa impaginazione.')),
       h('div', { class: 'azioni' },
         bottone('+ Crea il primo piano', () => apriDialogoPiano(), 'btn primario'),
@@ -900,6 +907,10 @@
     const r = M.leggiPacchetto(contenuto);
     if (r.errore) { toast(r.errore, 'errore'); return; }
     if (r.tipo === 'modello') {
+      if (accessoAttivo() && stato.scuola && !eReferente()) {
+        toast(`Usi il modello di ${stato.scuola.nome}, gestito dal referente: non può essere sostituito.`, 'errore');
+        return;
+      }
       const domanda = stato.modello.bloccato
         ? 'Stai già usando il modello della scuola. Sostituirlo con quello contenuto nel file? Fallo solo se è il modello ufficiale ricevuto dal referente. I piani già compilati non vengono modificati.'
         : 'Il file contiene un modello d\'istituto. Sostituire il modello attuale? I piani già compilati non vengono modificati.';
@@ -927,8 +938,9 @@
 
     if (m.bloccato) {
       app.append(h('div', { class: 'banner-info' },
-        h('p', null, h('strong', null, 'Modello della scuola. '), 'È in sola lettura: tutti i docenti devono usarlo così com\'è, perché i piani della scuola abbiano la stessa struttura. Solo il referente può modificarlo.'),
-        bottone('Sono il referente: modifica', () => {
+        h('p', null, h('strong', null, 'Modello della scuola. '), 'È in sola lettura: tutti i docenti devono usarlo così com\'è, perché i piani della scuola abbiano la stessa struttura. ',
+          accessoAttivo() && !eReferente() ? 'Possono modificarlo solo i referenti, accedendo con il proprio account della scuola.' : 'Solo il referente può modificarlo.'),
+        puoModificareModello() && bottone('Sono il referente: modifica', () => {
           if (!confirm('Il modello della scuola va modificato solo dal referente. Se lo modifichi, i tuoi piani non saranno più uniformi a quelli dei colleghi e potresti non ricevere gli aggiornamenti della scuola. Continuare?')) return;
           m.bloccato = false;
           salvaModelloOra();
@@ -940,7 +952,7 @@
       h('fieldset', { class: 'modello', disabled: m.bloccato },
         h('legend', { class: 'sr' }, 'Impostazioni del modello'),
         schedaScuola(m), schedaSezioniModello(m), schedaDiscipline(m)),
-      schedaCondivisione(m));
+      puoModificareModello() ? schedaCondivisione(m) : null);
   }
 
   function schedaScuola(m) {
@@ -1115,7 +1127,7 @@
       h('ol', { class: 'passi' },
         h('li', null, 'Esporta il modello e invia il file ai colleghi (e-mail, registro elettronico, cartella condivisa).'),
         h('li', null, 'Ogni docente apre l\'app e usa «Importa file»: da quel momento tutti compilano la stessa struttura.'),
-        h('li', null, 'Se l\'app è pubblicata sul sito della scuola, salva il file come ', h('code', null, 'modello-istituto.json'), ' accanto a ', h('code', null, 'index.html'), ': i docenti lo riceveranno automaticamente, anche quando lo aggiorni.')),
+        h('li', null, 'Per pubblicarlo sul sito, così che i docenti lo ricevano accedendo con l\'account della scuola, invia il file a chi gestisce il sito: va salvato nella cartella ', h('code', null, 'scuole'), '. I docenti riceveranno in automatico anche gli aggiornamenti.')),
       h('label', { class: 'voce piccola' }, blocca, h('span', null, 'Distribuisci in sola lettura (i docenti non lo modificano per errore)')),
       h('div', { class: 'azioni' },
         bottone('Esporta il modello', () => {
@@ -1152,7 +1164,7 @@
           h('li', null, 'Premi «Esporta il modello» e distribuisci il file ai docenti.'))),
       blocco('Per i docenti',
         h('ol', null,
-          h('li', null, h('strong', null, 'Usa sempre il modello della scuola. '), 'Aprendo l\'app dal link della scuola lo ricevi in automatico; in alternativa premi «Importa file» e scegli il modello ricevuto dal referente. Non modificarlo e non sostituirlo: così tutti i piani della scuola hanno la stessa struttura. Quando compare l\'avviso di aggiornamento, premi «Aggiorna».'),
+          h('li', null, h('strong', null, 'Usa sempre il modello della scuola. '), 'Premi «Accedi con Google» in alto e usa l\'account della scuola: il modello viene caricato in automatico. Senza accesso puoi aprire l\'app dal link della scuola oppure, in alternativa, premi «Importa file» e scegli il modello ricevuto dal referente. Non modificarlo e non sostituirlo: così tutti i piani della scuola hanno la stessa struttura. Quando compare l\'avviso di aggiornamento, premi «Aggiorna».'),
           h('li', null, 'Premi «+ Nuovo piano», indica disciplina, classe e sezione. Scrivendo «A, B, C» crei tre piani insieme.'),
           h('li', null, 'Compila le sezioni: quasi tutto si fa spuntando le voci. L\'indice a sinistra mostra cosa manca.'),
           h('li', null, 'Premi «Anteprima e stampa» per il PDF, oppure «Scarica Word» per il file modificabile.'))),
@@ -1177,6 +1189,99 @@
           h('li', null, 'D.Lgs. 62/2017 sulla valutazione; L. 104/1992, L. 170/2010 e normativa sui BES per l\'inclusione.'),
           h('li', null, 'L. 92/2019 e Linee guida per l\'insegnamento dell\'educazione civica (D.M. 183/2024).')),
         h('p', { class: 'nota' }, 'I testi dei traguardi sono riportati dalle Indicazioni nazionali, in alcuni casi in forma sintetica: il referente può adattarli nel modello d\'istituto.')));
+  }
+
+  /* ================= Accesso con Google ================= */
+
+  function accessoAttivo() {
+    return !!C.googleClientId && location.protocol !== 'file:';
+  }
+
+  function eReferente() {
+    return M.eReferente(stato.scuola, stato.utente);
+  }
+
+  // Con l'accesso attivo, il modello della scuola lo modifica solo il referente.
+  function puoModificareModello() {
+    return !accessoAttivo() || !stato.modello.bloccato || eReferente();
+  }
+
+  function caricaGoogle() {
+    if (!accessoAttivo()) return;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => {
+      google.accounts.id.initialize({ client_id: C.googleClientId, callback: (r) => accedi(r.credential), ux_mode: 'popup' });
+      disegnaAccesso();
+    };
+    script.onerror = () => toast('Impossibile caricare l\'accesso con Google: controlla la connessione.', 'errore');
+    document.head.append(script);
+  }
+
+  function disegnaAccesso() {
+    const box = document.getElementById('accesso');
+    if (!box || !accessoAttivo()) return;
+    if (stato.utente) {
+      box.replaceChildren(
+        h('span', { class: 'utente', title: stato.utente.email },
+          stato.utente.nome || stato.utente.email,
+          eReferente() ? h('span', { class: 'badge-referente' }, 'referente') : null),
+        bottone('Esci', esci, 'btn-link'));
+      return;
+    }
+    const area = h('div', { class: 'bottone-google' });
+    box.replaceChildren(area);
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.renderButton(area, { theme: 'outline', size: 'medium', shape: 'pill', text: 'signin_with', locale: 'it' });
+    }
+  }
+
+  function accedi(token) {
+    const u = M.leggiTokenGoogle(token);
+    if (!u) { toast('Accesso non riuscito.', 'errore'); return; }
+    stato.utente = u;
+    S.salvaUtente(u);
+    stato.scuola = M.trovaScuola(C.scuole, u);
+    if (!S.preferenze().docente && u.nome) S.salvaPreferenza('docente', u.nome);
+    disegnaAccesso();
+    if (stato.scuola) {
+      toast(`Accesso eseguito: ${stato.scuola.nome}.`);
+      caricaModelloScuola();
+    } else {
+      toast(u.dominio
+        ? 'Accesso eseguito. La tua scuola non ha ancora un modello su questo sito: usa il modello ricevuto dal referente.'
+        : 'Hai usato un account personale: per ricevere il modello della scuola accedi con l\'account della scuola.');
+    }
+    render({ mantieniScroll: true });
+  }
+
+  function esci() {
+    stato.utente = null;
+    stato.scuola = null;
+    S.salvaUtente(null);
+    if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect();
+    disegnaAccesso();
+    render({ mantieniScroll: true });
+    toast('Disconnessione eseguita.');
+  }
+
+  // Il modello della scuola vale per tutti i docenti e viene applicato da
+  // solo; solo il referente può tenere modifiche non ancora pubblicate.
+  function caricaModelloScuola() {
+    S.caricaModelloIstituto(stato.scuola.modello).then((remoto) => {
+      if (!remoto || !stato.scuola) return;
+      const locale = stato.modello;
+      if (stato.modelloSalvato && locale.bloccato && locale.aggiornato === remoto.aggiornato) return;
+      if (eReferente() && stato.modelloSalvato && !locale.bloccato) {
+        if (remoto.aggiornato > (locale.aggiornato || '')) mostraAggiornamentoModello(remoto);
+        return;
+      }
+      stato.modello = remoto;
+      salvaModelloOra();
+      render({ mantieniScroll: true });
+      toast(`Modello di ${stato.scuola.nome} caricato.`);
+    });
   }
 
   /* ================= Avvio ================= */
@@ -1208,11 +1313,17 @@
     stile.textContent = D.CSS_DOCUMENTO;
     document.head.append(stile);
 
+    stato.utente = accessoAttivo() ? S.caricaUtente() : null;
+    stato.scuola = M.trovaScuola(C.scuole, stato.utente);
+
     window.addEventListener('hashchange', () => render());
     aggiornaTestata();
     render();
+    caricaGoogle();
+    disegnaAccesso();
 
-    S.caricaModelloIstituto().then((remoto) => {
+    if (stato.scuola) { caricaModelloScuola(); return; }
+    S.caricaModelloIstituto(C.modelloPubblico).then((remoto) => {
       if (!remoto) return;
       if (!stato.modelloSalvato) {
         stato.modello = remoto;
