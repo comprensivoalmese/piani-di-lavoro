@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  const { model: M, documento: D, store: S } = window.PDL;
+  const { model: M, documento: D, store: S, conversione: CV, lettura: L } = window.PDL;
   const C = window.PDL.config || { googleClientId: '', modelloPubblico: '', scuole: [] };
   const app = document.getElementById('app');
 
@@ -101,17 +101,14 @@
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
   }
 
-  function chiediFile(accept) {
+  // Restituisce il file scelto dall'utente (senza leggerlo).
+  function scegliFile(accept) {
     return new Promise((risolvi) => {
       const input = h('input', { type: 'file', accept, class: 'nascosto' });
       input.addEventListener('change', () => {
         const file = input.files && input.files[0];
         input.remove();
-        if (!file) return;
-        const lettore = new FileReader();
-        lettore.onload = () => risolvi(String(lettore.result));
-        lettore.onerror = () => toast('Impossibile leggere il file.', 'errore');
-        lettore.readAsText(file, 'utf-8');
+        if (file) risolvi(file);
       });
       document.body.append(input);
       input.click();
@@ -246,6 +243,7 @@
     app.append(intestazioneVista('I miei piani di lavoro',
       n ? `${n} ${n === 1 ? 'piano salvato' : 'piani salvati'} in questo browser` : null,
       n ? bottone('Backup di tutti i piani', () => esportaPiani(stato.piani, 'Backup piani di lavoro.json')) : null,
+      bottone('Importa da Word o PDF', () => importaDocumento(), 'btn', { title: 'Ricostruisce secondo il modello un piano scritto in Word, PDF o altri formati' }),
       bottone('+ Nuovo piano', () => apriDialogoPiano(), 'btn primario')),
       avvisoModello());
 
@@ -339,7 +337,7 @@
         h('li', null, h('strong', null, 'Il piano si scarica in Word o si stampa in PDF'), ', sempre con la stessa impaginazione.')),
       h('div', { class: 'azioni' },
         bottone('+ Crea il primo piano', () => apriDialogoPiano(), 'btn primario'),
-        bottone('Importa un file', importaFile),
+        bottone('Importa un piano da Word o PDF', () => importaDocumento()),
         h('a', { class: 'btn', href: '#/modello' }, 'Configura il modello d\'istituto')));
   }
 
@@ -929,7 +927,10 @@
   }
 
   async function importaFile() {
-    const contenuto = await chiediFile('.json,application/json');
+    const file = await scegliFile('.json,application/json,' + L.ESTENSIONI);
+    if (!/\.json$/i.test(file.name)) { importaDocumento(file); return; }
+    let contenuto;
+    try { contenuto = await file.text(); } catch (e) { toast('Impossibile leggere il file.', 'errore'); return; }
     const r = M.leggiPacchetto(contenuto);
     if (r.errore) { toast(r.errore, 'errore'); return; }
     if (r.tipo === 'modello') {
@@ -953,6 +954,112 @@
       toast(`Importazione completata: ${stat.aggiunti} nuovi, ${stat.aggiornati} aggiornati` + (stat.ignorati ? `, ${stat.ignorati} già presenti.` : '.'));
       vai('#/piani');
     }
+  }
+
+  /* ================= Importazione di un piano scritto in un altro formato ================= */
+
+  const plurale = (n, uno, molti) => `${n} ${n === 1 ? uno : molti}`;
+
+  function descriviSezione(x) {
+    return [
+      x.riconosciute ? plurale(x.riconosciute, 'voce riconosciuta', 'voci riconosciute') : '',
+      x.aggiunte ? plurale(x.aggiunte, 'voce tua aggiunta', 'voci tue aggiunte') : '',
+      x.testo ? plurale(x.testo, 'paragrafo di testo', 'paragrafi di testo') : ''
+    ].filter(Boolean).join(', ');
+  }
+
+  // Legge un piano di lavoro da Word, PDF, OpenDocument o testo e lo ricostruisce
+  // secondo il modello: il docente controlla i dati e il riepilogo prima di crearlo.
+  async function importaDocumento(fileScelto) {
+    const file = fileScelto || await scegliFile(L.ESTENSIONI);
+    let righe;
+    try {
+      toast(`Lettura di «${file.name}»…`);
+      righe = await L.leggiDocumento(file);
+    } catch (e) {
+      toast(e && e.message ? e.message : 'Impossibile leggere il file.', 'errore');
+      return;
+    }
+    const m = stato.modello;
+    const letto = CV.converti(righe, m, { banca: stato.banca });
+    if (!letto.righe) { toast('Nel file non c\'è testo leggibile (potrebbe essere una scansione).', 'errore'); return; }
+
+    const pref = S.preferenze();
+    const dati = {
+      docente: letto.letti.docente || pref.docente || (stato.utente && stato.utente.nome) || '',
+      disciplina: letto.letti.disciplina,
+      classe: letto.letti.classe,
+      sezione: letto.letti.sezione,
+      anno: m.scuola.annoScolastico
+    };
+    const inBanca = h('input', { type: 'checkbox', checked: true, onchange: () => aggiorna() });
+    const inNote = h('input', { type: 'checkbox', checked: true });
+    const riepilogo = h('div', { class: 'riepilogo-import', 'aria-live': 'polite' });
+    const conversione = () => CV.converti(righe, m, { banca: stato.banca, dati, inBanca: inBanca.checked });
+
+    function aggiorna() {
+      const r = conversione();
+      riepilogo.replaceChildren(
+        r.riepilogo.length
+          ? h('ul', { class: 'elenco-riepilogo' }, r.riepilogo.map((x) => h('li', null, h('strong', null, x.titolo), ' — ', descriviSezione(x))))
+          : h('p', null, 'Non ho riconosciuto nessuna sezione del modello: controlla che il file sia un piano di lavoro.'),
+        r.nonCollocati.length ? h('details', null,
+          h('summary', null, `Testo che non so dove collocare (${plurale(r.nonCollocati.length, 'riga', 'righe')})`),
+          h('ul', { class: 'non-collocati' }, r.nonCollocati.map((t) => h('li', null, t)))) : null);
+    }
+
+    const discipline = m.discipline.map((d) => d.nome);
+    const errore = h('p', { class: 'errore-form', role: 'alert' });
+    const dlg = h('dialog', { class: 'dialogo dialogo-largo', 'aria-labelledby': 'titolo-import' });
+    const form = h('form', {
+      onsubmit: (e) => {
+        e.preventDefault();
+        const mancanti = ['docente', 'disciplina', 'classe', 'sezione'].filter((k) => !String(dati[k] || '').trim());
+        if (mancanti.length) { errore.textContent = 'Compila: ' + mancanti.join(', ') + '.'; return; }
+        dati.sezione = dati.sezione.trim().toUpperCase();
+        const r = conversione();
+        const piano = r.piano;
+        r.aggiunteBanca.forEach((a) => M.aggiungiABanca(stato.banca, a.catalogo, piano.disciplina, piano.classe, a.titolo, a.voce));
+        if (r.aggiunteBanca.length) salvaBanca();
+        const note = M.sezioniAttive(m).find((s) => s.id === 'note' && s.tipo === 'testo');
+        if (inNote.checked && note && r.nonCollocati.length) {
+          const v = M.valoreSezione(piano, note);
+          v.note = (String(v.note || '').trim() ? v.note.trim() + '\n\n' : '') +
+            `Testo importato da «${file.name}» da sistemare:\n` + r.nonCollocati.join('\n');
+        }
+        stato.piani.push(piano);
+        salvaPianiOra();
+        S.salvaPreferenza('docente', dati.docente.trim());
+        dlg.close();
+        vai('#/piano/' + encodeURIComponent(piano.id));
+        toast('Piano importato: controlla le sezioni e completa quelle che mancano.');
+      }
+    },
+    h('h2', { id: 'titolo-import' }, 'Importa un piano di lavoro'),
+    h('p', { class: 'nota' }, `Ho letto «${file.name}» e l'ho ricostruito secondo il modello ${m.scuola.nome ? 'di ' + m.scuola.nome : 'in uso'}: le voci del modello che corrispondono vengono spuntate, il resto rimane scritto nel piano. Controlla i dati e il riepilogo.`),
+    h('div', { class: 'griglia-2' },
+      campo('Docente *', h('input', { type: 'text', value: dati.docente, required: true, oninput: (e) => { dati.docente = e.target.value; } })),
+      campo('Disciplina *', selezione([{ valore: '', testo: '— scegli —' }].concat(discipline.map((d) => ({ valore: d, testo: d }))),
+        dati.disciplina, (v) => { dati.disciplina = v; aggiorna(); }, { required: true })),
+      campo('Classe *', selezione([{ valore: '', testo: '— scegli —' }, { valore: '1', testo: 'Prima' }, { valore: '2', testo: 'Seconda' }, { valore: '3', testo: 'Terza' }],
+        dati.classe, (v) => { dati.classe = v; aggiorna(); }, { required: true })),
+      campo('Sezione *', h('input', { type: 'text', value: dati.sezione, required: true, maxlength: 6, oninput: (e) => { dati.sezione = e.target.value; } })),
+      campo('Anno scolastico', h('input', { type: 'text', value: dati.anno, oninput: (e) => { dati.anno = e.target.value; } })),
+      letto.letti.anno && letto.letti.anno !== dati.anno ? h('p', { class: 'nota campo' }, `Nel file l'anno scolastico era ${letto.letti.anno}.`) : null),
+    h('h3', null, 'Cosa ho trovato'),
+    riepilogo,
+    h('label', { class: 'voce piccola' }, inBanca, h('span', null, 'Aggiungi alla mia banca personale argomenti e obiettivi che non ci sono (altrimenti restano scritti solo in questo piano)')),
+    h('label', { class: 'voce piccola' }, inNote, h('span', null, 'Copia nelle Osservazioni il testo che non so dove collocare, così non va perso')),
+    errore,
+    h('div', { class: 'azioni-dialogo' },
+      bottone('Annulla', () => dlg.close()),
+      h('button', { type: 'submit', class: 'btn primario' }, 'Crea il piano')));
+
+    aggiorna();
+    dlg.append(form);
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    dlg.showModal();
   }
 
   /* ================= Modello d'istituto ================= */
@@ -1210,6 +1317,7 @@
       blocco('Per fare prima',
         h('ul', null,
           h('li', null, h('strong', null, 'Riparti dall\'anno scorso: '), 'crea il nuovo piano scegliendo «Copia i contenuti da un piano esistente». Viene azzerata solo la situazione di partenza.'),
+          h('li', null, h('strong', null, 'Hai già un piano scritto in Word o PDF? '), 'Premi «Importa da Word o PDF»: viene ricostruito secondo il modello della scuola, spuntando le voci che corrispondono. Controlla poi le sezioni. Il file viene letto solo nel tuo browser.'),
           h('li', null, h('strong', null, 'Stessa disciplina in più classi: '), 'compila un piano, poi «Duplica» e indica le altre sezioni.'),
           h('li', null, h('strong', null, 'Argomenti: '), 'spunta dalla banca della disciplina quelli che svolgi; se ne svolgi altri, aggiungili con «Svolgi un argomento che non c\'è?». Restano nella tua banca personale e li ritrovi nei piani successivi.'),
           h('li', null, h('strong', null, 'Unità di apprendimento: '), 'usa «Copia le unità da un altro piano» per riprendere la programmazione di un collega o di un altro anno.'),

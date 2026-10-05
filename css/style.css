@@ -232,6 +232,12 @@ fieldset:disabled input, fieldset:disabled textarea, fieldset:disabled select { 
 .riga-aggiungi .campo.nascosto { display: none; }
 .riga-aggiungi > .btn { margin-bottom: .75rem; }
 
+.dialogo-largo { width: min(760px, calc(100vw - 2rem)); }
+.riepilogo-import { background: var(--sfondo); border-radius: 8px; padding: .5rem .9rem; margin: .3rem 0 .8rem; max-height: 38vh; overflow: auto; font-size: .9rem; }
+.elenco-riepilogo { margin: .2rem 0; padding-left: 1.1rem; }
+.elenco-riepilogo li { margin: .15rem 0; }
+.non-collocati { font-size: .85rem; color: var(--testo-2); padding-left: 1.1rem; }
+
 .avviso-modello { padding: .6rem .9rem; border-radius: 8px; margin: 0 0 1rem; font-size: .9rem; line-height: 1.45; }
 .avviso-modello.ok { background: var(--verde-chiaro); }
 .avviso-modello.attenzione { background: var(--giallo-chiaro); border: 1px solid #e3c35a; }

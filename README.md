@@ -15,6 +15,10 @@ della scuola secondaria di primo grado.
   mostrare anche quelli delle altre classi. Gli argomenti svolti in più si aggiungono alla **banca
   personale** del docente, che li ripropone in tutti i suoi piani ed è inclusa nei backup.
 - **Unità di apprendimento** con periodo, ore, nuclei tematici della disciplina, obiettivi e contenuti.
+- **Importazione di piani già scritti** in Word (.docx e .doc), PDF, OpenDocument, HTML o testo: il piano
+  viene ricostruito secondo il modello (dati generali, sezioni riconosciute anche con titoli diversi, voci
+  del modello spuntate, voci in più nella banca personale) e il docente controlla un riepilogo prima di
+  crearlo. Il file è letto solo nel browser; per i PDF si carica pdf.js da cdnjs.
 - **Scorciatoie**: più classi in un colpo solo («A, B, C»), duplicazione, copia dal piano
   dell'anno precedente o di un collega, copia delle UdA da un altro piano.
 - **Indice con avanzamento**: si vede subito quali sezioni mancano.
@@ -70,6 +74,8 @@ browser. È importante fare periodicamente *Backup di tutti i piani* dall'elenco
 | `js/argomenti.js` | Argomenti proposti per disciplina e classe |
 | `js/obiettivi.js` | Obiettivi specifici e obiettivi minimi proposti per disciplina e classe |
 | `js/config.js` | Accesso con Google e modelli delle scuole |
+| `js/lettura.js` | Lettura del testo da Word, PDF, OpenDocument, HTML e testo |
+| `js/conversione.js` | Ricostruzione di un piano letto da file secondo il modello, senza DOM |
 | `js/model.js` | Logica dei dati (piani, completamento, import/export), senza DOM |
 | `js/documento.js` | Generazione del documento per anteprima, stampa e Word |
 | `js/store.js` | Salvataggio nel browser e caricamento del modello d'istituto |
